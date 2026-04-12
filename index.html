@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ABH 3-Year Plan — 30 Day Bites</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ══ ABH BRAND TOKENS ════════════════════════════════════════════════════════ */
+:root {
+  --navy:   #1B2A4A;
+  --red:    #C0392B;
+  --amber:  #E67E22;
+  --green:  #27AE60;
+  --blue:   #0E7CCE;
+  --white:  #FFFFFF;
+  --ltgrey: #F5F5F5;
+  --mdgrey: #CCCCCC;
+  --dktext: #333333;
+  --sidebar-w: 240px;
+}
+
+/* ══ RESET & BASE ════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  color: var(--dktext);
+  background: var(--ltgrey);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+button { font-family: Arial, sans-serif; cursor: pointer; }
+input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
+
+/* ══ HEADER ══════════════════════════════════════════════════════════════════ */
+#app-header {
+  background: var(--navy);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+#app-header .logo {
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+#app-header .logo span { color: var(--blue); }
+#app-header .title {
+  font-size: 16px;
+  font-weight: bold;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+#app-header .right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+}
+#app-header .countdown {
+  background: rgba(255,255,255,0.1);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+#save-indicator {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+}
+#save-indicator.clean { background: var(--green); color: #fff; }
+#save-indicator.dirty { background: var(--amber); color: #fff; }
+#save-indicator.saving { background: var(--blue); color: #fff; }
+#save-indicator.error { background: var(--red); color: #fff; }
+
+/* ══ LAYOUT ══════════════════════════════════════════════════════════════════ */
+#app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ══ SIDEBAR ═════════════════════════════════════════════════════════════════ */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--navy);
+  color: var(--white);
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+#sidebar .section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.4);
+  padding: 16px 16px 6px;
+  font-weight: bold;
+}
+#sidebar .nav-item {
+  padding: 8px 16px 8px 20px;
+  cursor: pointer;
+  font-size: 13px;
+  border-left: 3px solid transparent;
+  transition: background 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#sidebar .nav-item:hover { background: rgba(255,255,255,0.08); }
+#sidebar .nav-item.active {
+  background: rgba(14,124,206,0.2);
+  border-left-color: var(--blue);
+  font-weight: bold;
+}
+
+/* ══ MAIN CONTENT ════════════════════════════════════════════════════════════ */
+#main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* ══ FOOTER ══════════════════════════════════════════════════════════════════ */
+#app-footer {
+  background: var(--navy);
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  padding: 6px 16px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+/* ══ KPI TILES ═══════════════════════════════════════════════════════════════ */
+.kpi-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.kpi-tile {
+  flex: 1;
+  min-width: 140px;
+  background: var(--white);
+  border-radius: 8px;
+  padding: 18px 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  text-align: center;
+}
+.kpi-tile .kpi-value {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.kpi-tile .kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+}
+.kpi-navy .kpi-value { color: var(--navy); }
+.kpi-blue .kpi-value { color: var(--blue); }
+.kpi-green .kpi-value { color: var(--green); }
+.kpi-red .kpi-value { color: var(--red); }
+.kpi-amber .kpi-value { color: var(--amber); }
+
+/* ══ CARDS ════════════════════════════════════════════════════════════════════ */
+.card {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.card-header {
+  background: var(--navy);
+  color: var(--white);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.card-body { padding: 16px; }
+
+/* ══ PROGRESS BAR ════════════════════════════════════════════════════════════ */
+.progress-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+.progress-label {
+  width: 200px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.progress-bar-bg {
+  flex: 1;
+  height: 20px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.progress-bar-text {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--dktext);
+}
+
+/* ══ TABLE ════════════════════════════════════════════════════════════════════ */
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.task-table thead th {
+  background: var(--navy);
+  color: var(--white);
+  padding: 10px 8px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.task-table thead th:hover { background: #253b63; }
+.task-table tbody tr {
+  border-bottom: 1px solid var(--mdgrey);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.task-table tbody tr:nth-child(even) { background: var(--ltgrey); }
+.task-table tbody tr:hover { background: #e0eaf5; }
+.task-table td {
+  padding: 8px;
+  vertical-align: middle;
+}
+.task-table .task-name-cell {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ══ BADGES ══════════════════════════════════════════════════════════════════ */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.badge-todo      { background: #ddd; color: #555; }
+.badge-progress  { background: var(--blue); color: #fff; }
+.badge-complete  { background: var(--green); color: #fff; }
+.badge-blocked   { background: var(--red); color: #fff; }
+.badge-onhold    { background: var(--amber); color: #fff; }
+.badge-overdue   { background: var(--red); color: #fff; }
+
+.priority-urgent { color: var(--red); font-weight: bold; }
+.priority-high   { color: var(--amber); font-weight: bold; }
+.priority-normal { color: var(--navy); }
+.priority-low    { color: #999; }
+.priority-none   { color: #bbb; }
+
+/* ══ FILTER BAR ══════════════════════════════════════════════════════════════ */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-bar select, .filter-bar input {
+  padding: 6px 10px;
+  border: 1px solid var(--mdgrey);
+  border-radius: 4px;
+  font-size: 12px;
+}
+.filter-bar input[type="text"] { width: 200px; }
+
+/* ══ BUTTONS ═════════════════════════════════════════════════════════════════ */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-success { background: var(--green); color: #fff; }
+.btn-danger  { background: var(--red); color: #fff; }
+.btn-navy    { background: var(--navy); color: #fff; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--mdgrey);
+  color: var(--dktext);
+}
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* ══ MODAL ═══════════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 500;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 60px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: 8px;
+  width: 620px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.modal-header {
+  background: var(--navy);
+  color: var(--white);
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 8px 8px 0 0;
+}
+.modal-header .close-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+.modal-body { padding: 20px; }
+.modal-body label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  margin-bottom: 4px;
+  margin-top: 12px;
+  font-weight: bold;
+}
+.modal-body label:first-child { margin-top: 0; }
+.modal-body input[type="text"],
+.modal-body input[type="date"],
+.modal-body select,
+.modal-body textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--mdgrey);
+  border-radius: 4px;
+  font-size: 13px;
+}
+.modal-body textarea { resize: vertical; min-height: 80px; }
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--mdgrey);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.modal-footer .left-btns { display: flex; gap: 8px; }
+.modal-footer .right-btns { display: flex; gap: 8px; }
+
+/* Multi-select checkboxes */
+.multi-select-dropdown {
+  position: relative;
+  border: 1px solid var(--mdgrey);
+  border-radius: 4px;
+  padding: 6px 10px;
+  min-height: 34px;
+  cursor: pointer;
+  background: #fff;
+  font-size: 13px;
+}
+.multi-select-options {
+  display: none;
+  position: absolute;
+  left: 0; right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid var(--mdgrey);
+  border-radius: 0 0 4px 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.multi-select-options.open { display: block; }
+.multi-select-options label {
+  display: flex !important;
+  align-items: center;
+  padding: 6px 10px;
+  margin: 0 !important;
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: normal;
+  color: var(--dktext);
+}
+.multi-select-options label:hover { background: var(--ltgrey); }
+.multi-select-options input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+
+/* ══ INLINE SELECT ═══════════════════════════════════════════════════════════ */
+.inline-select {
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+.inline-select:hover { border-color: var(--mdgrey); }
+.inline-select:focus { border-color: var(--blue); outline: none; }
+
+/* ══ TOAST ═══════════════════════════════════════════════════════════════════ */
+#toast-container {
+  position: fixed;
+  top: 70px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  padding: 10px 20px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+}
+.toast-success { background: var(--green); }
+.toast-error   { background: var(--red); }
+.toast-info    { background: var(--blue); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* ══ PERSON CARDS ════════════════════════════════════════════════════════════ */
+.person-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.person-card {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+.person-card-header {
+  background: var(--navy);
+  color: #fff;
+  padding: 12px 16px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.person-card-header .overdue-count {
+  background: var(--red);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+.person-card-body { padding: 12px 16px; }
+.person-stat {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.person-tasks-list { margin-top: 8px; }
+.person-task-item {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.person-task-item:last-child { border-bottom: none; }
+.person-task-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expand-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  text-decoration: underline;
+}
+
+/* ══ TIMELINE ════════════════════════════════════════════════════════════════ */
+.timeline-month {
+  margin-bottom: 20px;
+}
+.timeline-month-header {
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--navy);
+  border-bottom: 2px solid var(--navy);
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+}
+.timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--mdgrey);
+  margin-left: 12px;
+  margin-bottom: 2px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.timeline-item:hover { background: #f0f4f8; }
+.timeline-date {
+  width: 70px;
+  flex-shrink: 0;
+  font-weight: bold;
+  font-size: 11px;
+}
+.timeline-item.overdue { border-left-color: var(--red); }
+.timeline-item.urgent  { border-left-color: var(--red); }
+.timeline-item.high    { border-left-color: var(--amber); }
+.timeline-item.normal  { border-left-color: var(--navy); }
+.timeline-item.low     { border-left-color: var(--mdgrey); }
+.timeline-item.no-date { border-left-color: #ddd; }
+
+/* ══ STRATEGIC VIEW ══════════════════════════════════════════════════════════ */
+.strategic-section {
+  margin-bottom: 24px;
+}
+.strategic-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.strategic-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--navy);
+  flex: 1;
+}
+.strategic-count {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ══ MISC ════════════════════════════════════════════════════════════════════ */
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.view-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--navy);
+}
+.overdue-text { color: var(--red); font-weight: bold; }
+.days-ok { color: var(--green); }
+.days-warn { color: var(--amber); }
+.no-date-text { color: #999; font-style: italic; }
+
+/* Sort arrows */
+th .sort-arrow { font-size: 10px; margin-left: 4px; }
+
+/* Scrollbar styling */
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ═════════════════════════════════════════════════════════════ -->
+<header id="app-header">
+  <div class="logo"><span>ABH</span></div>
+  <div class="title">3-Year Plan — 30 Day Bites</div>
+  <div class="right">
+    <div class="countdown" id="countdown"></div>
+    <div id="save-indicator" class="clean">SAVED</div>
+    <button class="btn btn-sm btn-primary" onclick="saveAll()">Save</button>
+  </div>
+</header>
+
+<!-- ══ BODY ═══════════════════════════════════════════════════════════════ -->
+<div id="app-body">
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="section-label">Command</div>
+    <div class="nav-item active" data-view="dashboard">Dashboard</div>
+    <div class="nav-item" data-view="overdue">Overdue</div>
+    <div class="nav-item" data-view="mytasks">My Tasks</div>
+
+    <div class="section-label">Strategic</div>
+    <div class="nav-item" data-view="strategic">3-Year Outcomes</div>
+    <div class="nav-item" data-view="q1">Q1 Priorities</div>
+    <div class="nav-item" data-view="q2">Q2 Priorities</div>
+
+    <div class="section-label">Teams</div>
+    <div class="nav-item" data-view="person">By Person</div>
+    <div class="nav-item" data-view="workload">Workload</div>
+
+    <div class="section-label">Operational</div>
+    <div class="nav-item" data-view="gsd">Getting Shit Done</div>
+    <div class="nav-item" data-view="monthend">Month End</div>
+    <div class="nav-item" data-view="finance">Finance Tasks</div>
+
+    <div class="section-label">All</div>
+    <div class="nav-item" data-view="tasklist">All Tasks</div>
+    <div class="nav-item" data-view="timeline">Timeline</div>
+
+    <div class="section-label">Config</div>
+    <div class="nav-item" data-view="config">Team &amp; Import/Export</div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="main"></main>
+</div>
+
+<!-- ══ FOOTER ═════════════════════════════════════════════════════════════ -->
+<footer id="app-footer">INTERNAL — NOT FOR DISTRIBUTION</footer>
+
+<!-- ══ TASK MODAL ═════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modal-title">Edit Task</span>
+      <button class="close-btn" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="modal-task-id">
+      <label>Task Name</label>
+      <input type="text" id="modal-name">
+
+      <label>Space</label>
+      <select id="modal-space"></select>
+
+      <label>List</label>
+      <select id="modal-list"></select>
+
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1">
+          <label>Status</label>
+          <select id="modal-status">
+            <option value="to do">To Do</option>
+            <option value="in progress">In Progress</option>
+            <option value="complete">Complete</option>
+            <option value="blocked">Blocked</option>
+            <option value="on hold">On Hold</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label>Priority</label>
+          <select id="modal-priority">
+            <option value="URGENT">Urgent</option>
+            <option value="HIGH">High</option>
+            <option value="NORMAL">Normal</option>
+            <option value="LOW">Low</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Assignee(s)</label>
+      <div class="multi-select-dropdown" id="modal-assignee-dropdown" onclick="toggleMultiSelect(event)">
+        <span id="modal-assignee-display">Select assignees...</span>
+        <div class="multi-select-options" id="modal-assignee-options"></div>
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1">
+          <label>Due Date</label>
+          <input type="date" id="modal-due">
+        </div>
+        <div style="flex:1">
+          <label>Start Date</label>
+          <input type="date" id="modal-start">
+        </div>
+      </div>
+
+      <label>Notes / Content</label>
+      <textarea id="modal-content"></textarea>
+
+      <label>Latest Comment</label>
+      <textarea id="modal-comment" rows="3"></textarea>
+    </div>
+    <div class="modal-footer">
+      <div class="left-btns">
+        <button class="btn btn-danger btn-sm" id="modal-delete-btn" onclick="deleteTask()">Delete</button>
+      </div>
+      <div class="right-btns">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-success" onclick="saveTask()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST CONTAINER ═══════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+const SB_URL = 'https://yxaebxkkclbjezffmerw.supabase.co';
+const SB_KEY = 'sb_publishable_yLmaFw0myJv-rHuCC2LsHw_WW7d8lJn';
+const SB_TABLE = 'abh_3year_tasks';
+
+let sb = null;
+try {
+  if (window.supabase && SB_KEY && SB_KEY.length > 10) {
+    sb = window.supabase.createClient(SB_URL, SB_KEY);
+  }
+} catch(e) { console.warn('Supabase init failed:', e); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TEAM LIST
+// ══════════════════════════════════════════════════════════════════════════════
+const TEAM = [
+  'ROBERT HARRIS', 'Richard Carlick', 'Richard Magin', 'Issareeya Yeeka',
+  'Jeremy Wheeler', 'Sharon Salt', 'Lisa Fontanot', 'Ravin singh',
+  'Jasmine Pereira', 'kate', 'Caine Bowers'
+];
+
+const SPACES = [
+  'ABH 3 Year $150m turnover goal', 'Richard Magin\'s Tasks',
+  'Finance Task reallocations', 'Getting Shit done',
+  'Month end reminders', 'Finance Team ongoing efficiency', 'My tasks'
+];
+
+const LISTS = [
+  'List', '2026–2028 Strategic Outcomes',
+  'Q1 Strategic Priorities - Stabilise core operations to enable scalable growth.',
+  'Q2 Strategic Priorities - Start to scale for growth'
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EMBEDDED TASK DATA — ALL 77 TASKS FROM CLICKUP CSV
+// ══════════════════════════════════════════════════════════════════════════════
+const SEED_TASKS = [
+  {id:"86d20j2q2",name:"$150m revenue by Dec 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20jajn",name:"$100m 12 month rolling Pureau revenue by December 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20j2uv",name:"Cask operations in 2–3 states",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20j2t2",name:"$50m Non-Bottle Revenue by Dec 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20j8tj",name:"Canning Line Operational at 1 Shift/Day",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20j2vg",name:"Direct to customer coverage 30–50% population",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20j2wf",name:"Culture aligned to company values",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20j4n8",name:"Have a clear recruitment and training programme",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20v98x",name:"Drip trays ordered to reduce water spillage",status:"in progress",content:"",assignees:["Jasmine Pereira"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-03-31",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d20jd43",name:"Get HMPS /Scholles technicians onsite to fix ongoing problems to get to consistent 70 pallets a shift",status:"in progress",content:"",assignees:["Ravin singh"],priority:"URGENT",latestComment:"Cask still an issue , trails on abbe cask still needs to improve followed by an trail .",commentCount:3,dueDate:"2026-04-15",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-04-01",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d20k4wt",name:"All Staff to have clear Roles and responsibilities",status:"in progress",content:"",assignees:["Richard Carlick","ROBERT HARRIS"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-03-31",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d21jtk5",name:"Office Signage",status:"in progress",content:"",assignees:["Jasmine Pereira","ROBERT HARRIS"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-21",dateUpdated:"2026-03-30",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d20jd7y",name:"Advertise for maintenance staff for EP",status:"in progress",content:"",assignees:["Ravin singh","Jeremy Wheeler","Richard Carlick"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-02-27",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-03-16",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d20k6p5",name:"Ensure all staff know what the plan is for St Marys so no surprise",status:"in progress",content:"",assignees:["Jeremy Wheeler","Richard Carlick"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-02-27",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-03-16",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d20vq93",name:"Have all Non production staff working out of EP",status:"in progress",content:"",assignees:["kate","Richard Carlick"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-31",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-03-16",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d250aqh",name:"Train night shift staff to get them delivering the same output on the HMPS as day shift - or find people who can",status:"in progress",content:"",assignees:["Ravin singh","Jeremy Wheeler","Richard Carlick"],priority:"URGENT",latestComment:"looking for operator on HMPS line and PM staff traing is on going.",commentCount:1,dueDate:"2026-03-20",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-16",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d22udy5",name:"Sort our solutions for remaining water on the floor",status:"in progress",content:"",assignees:["Jasmine Pereira"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-03-31",startDate:null,dateCreated:"2026-02-24",dateUpdated:"2026-03-16",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d22udh6",name:"Hire an additional resource for dispatch/OE",status:"in progress",content:"",assignees:["kate","Caine Bowers","Sharon Salt","Richard Carlick"],priority:"HIGH",latestComment:"Second interview of candidates scheduled for next week W/c 6/4",commentCount:1,dueDate:"2026-04-19",startDate:null,dateCreated:"2026-02-24",dateUpdated:"2026-04-01",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d20jd5w",name:"Everyone clear on the company's values and even if people are not getting tasks correct",status:"to do",content:"",assignees:["Jeremy Wheeler"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2630-03-31",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-21",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
+  {id:"86d20vghw",name:"EDI Integration into WMS / Netsuite",status:"in progress",content:"",assignees:["Sharon Salt","Jeremy Wheeler"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-03",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4pt",name:"Secondary suppliers sought for most products",status:"in progress",content:"",assignees:["Sharon Salt","Jeremy Wheeler"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-05-31",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-03-16",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20vfwr",name:"Assessment of a Queensland facility and sign off",status:"in progress",content:"",assignees:["ROBERT HARRIS"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-04-01",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4n6",name:"Line A moved and RO to EP",status:"to do",content:"",assignees:["Ravin singh","Jeremy Wheeler","Richard Carlick"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4qb",name:"SSCC labels to be used in WMS",status:"to do",content:"",assignees:["Jeremy Wheeler","Caine Bowers","Sharon Salt"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2630-04-26",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4pd",name:"Production costs aligned to BoM",status:"to do",content:"",assignees:["Jeremy Wheeler","Richard Magin"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4q0",name:"Maintenance programme operational",status:"to do",content:"",assignees:["Ravin singh","Jasmine Pereira","Jeremy Wheeler"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4na",name:"EP Site managers 3 month assessment",status:"to do",content:"",assignees:["Richard Carlick"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4p4",name:"7 days stock stability",status:"to do",content:"",assignees:["Sharon Salt","Jeremy Wheeler","Ravin singh"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20k4nr",name:"3 year plan built into NetSuite with building blocks",status:"to do",content:"",assignees:["ROBERT HARRIS"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20vacz",name:"Communal areas painted / door to factory from washroom built",status:"to do",content:"",assignees:["Jasmine Pereira","ROBERT HARRIS"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20vnb8",name:"Have all works (except canning lines) completed",status:"to do",content:"",assignees:["Ravin singh","Richard Carlick","Jeremy Wheeler"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-06-26",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20vtne",name:"Line B moved to EP",status:"to do",content:"",assignees:["Richard Carlick","Jeremy Wheeler","Ravin singh"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-05-21",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20vuc1",name:"All remaining equipment moved to EP",status:"to do",content:"",assignees:["Richard Carlick","Jeremy Wheeler","Ravin singh"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-06-18",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d24tuxf",name:"Have signage added to the building",status:"to do",content:"",assignees:["ROBERT HARRIS"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-06-30",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q2 Strategic Priorities - Start to scale for growth"},
+  {id:"86d20w2v6",name:"ST Marys water flow testing",status:"in progress",content:"",assignees:["Richard Carlick","Richard Magin"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-02-26",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Getting Shit done",folder:"hidden",list:"List"},
+  {id:"86d2289a9",name:"EP water flow report for Goodmans",status:"in progress",content:"",assignees:["Richard Carlick","Richard Magin"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-03-05",startDate:null,dateCreated:"2026-02-23",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Getting Shit done",folder:"hidden",list:"List"},
+  {id:"86d229x7k",name:"Cardboard bailer",status:"in progress",content:"",assignees:["Sharon Salt"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-05",startDate:null,dateCreated:"2026-02-23",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Getting Shit done",folder:"hidden",list:"List"},
+  {id:"86d20zg23",name:"Get Richard Hungerford's CDC contact person for wall/door",status:"in progress",content:"",assignees:["Richard Carlick"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-06",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-03-12",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Getting Shit done",folder:"hidden",list:"List"},
+  {id:"86d229vkr",name:"CAD of washroom changes",status:"in progress",content:"Do you have plan and ability to do this or do I need to measure it up",assignees:["Richard Carlick"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-05",startDate:null,dateCreated:"2026-02-23",dateUpdated:"2026-03-12",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Getting Shit done",folder:"hidden",list:"List"},
+  {id:"86d20zghn",name:"Finalisation of Oatly contract",status:"to do",content:"",assignees:["Richard Carlick"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-13",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Getting Shit done",folder:"hidden",list:"List"},
+  {id:"86d2288pd",name:"When the electrician in next separate light switch for board room",status:"to do",content:"",assignees:["Richard Carlick"],priority:"LOW",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-02-23",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Getting Shit done",folder:"hidden",list:"List"},
+  {id:"86d2180v5",name:"Raise weekly invoices to AGD for warehouse storage and pick pack.",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-20",dateUpdated:"2026-02-20",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Month end reminders",folder:"hidden",list:"List"},
+  {id:"86d2180wg",name:"Book Pallet Invoices to AGD.",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-20",dateUpdated:"2026-02-20",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Month end reminders",folder:"hidden",list:"List"},
+  {id:"86d26d21x",name:"Trading Terms",status:"to do",content:"",assignees:[],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-04",startDate:null,dateCreated:"2026-03-05",dateUpdated:"2026-03-05",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Month end reminders",folder:"hidden",list:"List"},
+  {id:"86d21fwh2",name:"Review of workforce ready",status:"in progress",content:"",assignees:["Richard Magin","ROBERT HARRIS"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-04-09",startDate:null,dateCreated:"2026-02-21",dateUpdated:"2026-03-12",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d21g15p",name:"Work with Lisa to make sure all SOPs are documented",status:"to do",content:"",assignees:["Lisa Fontanot","Richard Magin"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-25",startDate:null,dateCreated:"2026-02-21",dateUpdated:"2026-02-23",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d21g1bb",name:"Understand challenges Sharon has around billing and find solutions",status:"to do",content:"",assignees:["Richard Magin","Sharon Salt"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-19",startDate:null,dateCreated:"2026-02-21",dateUpdated:"2026-02-25",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d21g2gh",name:"Ensure the EDI process that Sharon is developing is fully documented",status:"to do",content:"",assignees:["Sharon Salt","Richard Magin"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-29",startDate:null,dateCreated:"2026-02-21",dateUpdated:"2026-02-23",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d21hkzp",name:"Review all of the ADP documents, decide what is for administrators around using the ADP process, and what needs to be shared with staff to use the ADP system better.",status:"to do",content:"",assignees:["ROBERT HARRIS","Richard Magin"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-05-31",startDate:null,dateCreated:"2026-02-21",dateUpdated:"2026-03-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d21z1va",name:"Review induction process",status:"to do",content:"",assignees:["Richard Magin"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-11",startDate:null,dateCreated:"2026-02-23",dateUpdated:"2026-02-23",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d225gjw",name:"WMS SOPs",status:"to do",content:"",assignees:["Sharon Salt","Richard Magin"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-24",startDate:null,dateCreated:"2026-02-23",dateUpdated:"2026-02-23",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d23anad",name:"Ploy to run Merchandising and Terms provision for March y/e Rob to check",status:"to do",content:"",assignees:["ROBERT HARRIS","Issareeya Yeeka"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-06",startDate:null,dateCreated:"2026-02-26",dateUpdated:"2026-03-05",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d24erqm",name:"Have IOS weekly staff put data directly into ADP and authorised by Tanja in advance of paying",status:"to do",content:"",assignees:["Richard Magin"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:"2026-03-23",startDate:null,dateCreated:"2026-02-28",dateUpdated:"2026-03-10",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d25adga",name:"Check week to date Workforce ready entries to make weekly payroll quicker on Wed",status:"to do",content:"",assignees:["Richard Magin"],priority:"HIGH",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-05",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d2805hz",name:"Check week to date Workforce ready entries to make weekly payroll quicker on Wed (w/c 16/03)",status:"to do",content:"",assignees:["Richard Magin"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-03-16",startDate:null,dateCreated:"2026-03-09",dateUpdated:"2026-03-09",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d2anf9p",name:"Check week to date Workforce ready entries to make weekly payroll quicker on Wed (w/c 23/03)",status:"to do",content:"",assignees:["Richard Magin"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-03-23",startDate:null,dateCreated:"2026-03-16",dateUpdated:"2026-03-16",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d2d5jkz",name:"Check week to date Workforce ready entries to make weekly payroll quicker on Wed (w/c 30/03)",status:"to do",content:"",assignees:["Richard Magin"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-03-30",startDate:null,dateCreated:"2026-03-23",dateUpdated:"2026-03-23",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d2ftu4v",name:"Check week to date Workforce ready entries to make weekly payroll quicker on Wed (w/c 06/04)",status:"to do",content:"",assignees:["Richard Magin"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-04-06",startDate:null,dateCreated:"2026-03-30",dateUpdated:"2026-03-30",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d2j8j72",name:"Check week to date Workforce ready entries to make weekly payroll quicker on Wed (w/c 13/04)",status:"to do",content:"",assignees:["Richard Magin"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-04-13",startDate:null,dateCreated:"2026-04-06",dateUpdated:"2026-04-06",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Richard Magin's Tasks",folder:"hidden",list:"List"},
+  {id:"86d292gh5",name:"Pay fuel card",status:"to do",content:"",assignees:["ROBERT HARRIS"],priority:"none",latestComment:"",commentCount:0,dueDate:"2026-04-13",startDate:null,dateCreated:"2026-03-12",dateUpdated:"2026-03-12",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"My tasks",folder:"hidden",list:"List"},
+  {id:"86d23argy",name:"Ploy to run March CDS and Merch accrual Rob to check",status:"in progress",content:"",assignees:["Issareeya Yeeka","ROBERT HARRIS"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-06",startDate:null,dateCreated:"2026-02-26",dateUpdated:"2026-03-12",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Team ongoing efficiency",folder:"hidden",list:"List"},
+  {id:"86d23anv1",name:"Any screaming creditors for IOS",status:"to do",content:"",assignees:["Lisa Fontanot","Sharon Salt"],priority:"NORMAL",latestComment:"Think it was due to the account merger. I have fixed it and it shows now on the bill payment processing screen. The ABA file against the Vendor cannot have a subsidiary against it. There were 2 .. one against IOS and the other ABH.",commentCount:7,dueDate:null,startDate:"2026-04-14",dateCreated:"2026-02-26",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Team ongoing efficiency",folder:"hidden",list:"List"},
+  {id:"86d254yb8",name:"Promotional claims reconciliation",status:"in progress",content:"",assignees:["Issareeya Yeeka","Lisa Fontanot"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-03",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-28",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254xfu",name:"Exception handling (price / qty / freight)",status:"to do",content:"",assignees:["Issareeya Yeeka","Sharon Salt"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-17",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254xmz",name:"Code & post invoices (GL / cost centres / landed cost)",status:"to do",content:"",assignees:["Issareeya Yeeka","Sharon Salt"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-13",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254xrh",name:"Supplier statement reconciliations",status:"to do",content:"",assignees:["Lisa Fontanot","Issareeya Yeeka"],priority:"LOW",latestComment:"",commentCount:0,dueDate:"2026-04-30",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254xvn",name:"Bank reconciliations",status:"to do",content:"",assignees:["Issareeya Yeeka","Sharon Salt","Lisa Fontanot"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-27",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254xyv",name:"Petty cash & corporate card reconciliations",status:"to do",content:"",assignees:["Sharon Salt","Lisa Fontanot","Issareeya Yeeka"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-27",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254y3n",name:"Credit notes (returns / claims)",status:"to do",content:"",assignees:["Issareeya Yeeka","Lisa Fontanot"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-13",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254y64",name:"AR collections & customer follow-up",status:"to do",content:"",assignees:["Lisa Fontanot","Issareeya Yeeka"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-20",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254y7t",name:"Monthly deductions review (chargebacks)",status:"to do",content:"",assignees:["Issareeya Yeeka","Lisa Fontanot"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-13",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254ykz",name:"Freight claims processing",status:"to do",content:"",assignees:["Lisa Fontanot","Issareeya Yeeka"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-13",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254ypc",name:"Damaged stock / insurance claims",status:"to do",content:"",assignees:["Issareeya Yeeka","Lisa Fontanot"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-27",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254yqk",name:"Fixed asset register maintenance (additions & disposals)",status:"to do",content:"",assignees:["ROBERT HARRIS","Richard Carlick","Issareeya Yeeka"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-17",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254yu0",name:"Depreciation journals (post & reconcile)",status:"to do",content:"",assignees:["ROBERT HARRIS","Issareeya Yeeka"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-04-17",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-02",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d254y1q",name:"Cash allocation & remittances",status:"to do",content:"",assignees:["Issareeya Yeeka","Lisa Fontanot"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-03-13",startDate:null,dateCreated:"2026-03-02",dateUpdated:"2026-03-12",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"},
+  {id:"86d2henkz",name:"Supplier rebate accruals & reconciliation",status:"to do",content:"",assignees:["ROBERT HARRIS","Lisa Fontanot","Issareeya Yeeka"],priority:"NORMAL",latestComment:"",commentCount:0,dueDate:"2026-05-03",startDate:null,dateCreated:"2026-04-03",dateUpdated:"2026-04-03",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"Finance Task reallocations",folder:"hidden",list:"List"}
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// APP STATE
+// ══════════════════════════════════════════════════════════════════════════════
+let tasks = [];
+let dirty = false;
+let currentView = 'dashboard';
+let sortCol = null;
+let sortAsc = true;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+const TODAY = new Date();
+TODAY.setHours(0,0,0,0);
+
+function fmtDate(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return '—';
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function fmtDateShort(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return '—';
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `${dd}/${mm}`;
+}
+
+function daysDiff(isoStr) {
+  if (!isoStr) return null;
+  const d = new Date(isoStr);
+  if (isNaN(d)) return null;
+  d.setHours(0,0,0,0);
+  return Math.round((d - TODAY) / (1000*60*60*24));
+}
+
+function monthYear(isoStr) {
+  if (!isoStr) return 'No Date';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return 'No Date';
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function isOverdue(t) {
+  if (t.status === 'complete') return false;
+  if (!t.dueDate) return false;
+  const dd = daysDiff(t.dueDate);
+  return dd !== null && dd < 0;
+}
+
+function daysUntilText(t) {
+  if (!t.dueDate) return '<span class="no-date-text">No date</span>';
+  const dd = daysDiff(t.dueDate);
+  if (dd === null) return '<span class="no-date-text">Invalid</span>';
+  if (t.status === 'complete') return '<span class="days-ok">Done</span>';
+  if (dd < 0) return `<span class="overdue-text">${Math.abs(dd)}d overdue</span>`;
+  if (dd === 0) return '<span class="days-warn">Due today</span>';
+  if (dd <= 7) return `<span class="days-warn">${dd}d</span>`;
+  return `<span class="days-ok">${dd}d</span>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COUNTDOWN
+// ══════════════════════════════════════════════════════════════════════════════
+function updateCountdown() {
+  const target = new Date('2028-12-31');
+  const diff = Math.ceil((target - new Date()) / (1000*60*60*24));
+  document.getElementById('countdown').textContent = `${diff.toLocaleString()} days to $150m target | 31/12/2028`;
+}
+updateCountdown();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════════════════════════
+function toast(msg, type='success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SAVE INDICATOR
+// ══════════════════════════════════════════════════════════════════════════════
+function markDirty() {
+  dirty = true;
+  const el = document.getElementById('save-indicator');
+  el.className = 'dirty';
+  el.textContent = 'UNSAVED';
+}
+
+function markClean() {
+  dirty = false;
+  const el = document.getElementById('save-indicator');
+  el.className = 'clean';
+  el.textContent = 'SAVED';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PERSISTENCE
+// ══════════════════════════════════════════════════════════════════════════════
+const LS_KEY = 'abh_3year_tasks';
+
+function saveToLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(tasks)); } catch(e) {}
+}
+
+async function saveToSupabase() {
+  if (!sb) return false;
+  try {
+    const { error } = await sb.from(SB_TABLE).upsert(
+      tasks.map(t => ({ ...t, assignees: JSON.stringify(t.assignees) })),
+      { onConflict: 'id' }
+    );
+    if (error) { console.error('Supabase save error:', error); return false; }
+    return true;
+  } catch(e) { console.error('Supabase save exception:', e); return false; }
+}
+
+async function loadFromSupabase() {
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.from(SB_TABLE).select('*');
+    if (error || !data || data.length === 0) return null;
+    return data.map(t => ({
+      ...t,
+      assignees: typeof t.assignees === 'string' ? JSON.parse(t.assignees) : (t.assignees || [])
+    }));
+  } catch(e) { return null; }
+}
+
+function loadFromLocal() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+async function saveAll() {
+  const el = document.getElementById('save-indicator');
+  el.className = 'saving';
+  el.textContent = 'SAVING...';
+  saveToLocal();
+  const ok = await saveToSupabase();
+  if (ok) {
+    toast('Saved to cloud');
+  } else {
+    toast('Saved locally (cloud unavailable)', 'info');
+  }
+  markClean();
+}
+
+async function initData() {
+  // Try Supabase first, then localStorage, then seed data
+  let data = await loadFromSupabase();
+  if (data && data.length > 0) {
+    tasks = data;
+    toast('Loaded from cloud', 'info');
+  } else {
+    data = loadFromLocal();
+    if (data && data.length > 0) {
+      tasks = data;
+      toast('Loaded from local storage', 'info');
+    } else {
+      tasks = JSON.parse(JSON.stringify(SEED_TASKS));
+      saveToLocal();
+      toast('Initialised with seed data', 'info');
+    }
+  }
+  renderView();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════════════════════
+document.querySelectorAll('#sidebar .nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('#sidebar .nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    currentView = item.dataset.view;
+    sortCol = null;
+    renderView();
+  });
+});
+
+function renderView() {
+  const main = document.getElementById('main');
+  switch(currentView) {
+    case 'dashboard': renderDashboard(main); break;
+    case 'overdue': renderFilteredList(main, 'Overdue Tasks', t => isOverdue(t)); break;
+    case 'mytasks': renderFilteredList(main, 'My Tasks (ROBERT HARRIS)', t => t.assignees.includes('ROBERT HARRIS')); break;
+    case 'strategic': renderStrategic(main); break;
+    case 'q1': renderFilteredList(main, 'Q1 Priorities — Stabilise Core Operations', t => t.list && t.list.includes('Q1 Strategic')); break;
+    case 'q2': renderFilteredList(main, 'Q2 Priorities — Start to Scale for Growth', t => t.list && t.list.includes('Q2 Strategic')); break;
+    case 'person': renderPersonView(main); break;
+    case 'workload': renderWorkload(main); break;
+    case 'gsd': renderFilteredList(main, 'Getting Shit Done', t => t.space === 'Getting Shit done'); break;
+    case 'monthend': renderFilteredList(main, 'Month End Reminders', t => t.space === 'Month end reminders'); break;
+    case 'finance': renderFilteredList(main, 'Finance Tasks', t => t.space === 'Finance Task reallocations' || t.space === 'Finance Team ongoing efficiency'); break;
+    case 'tasklist': renderTaskList(main); break;
+    case 'timeline': renderTimeline(main); break;
+    case 'config': renderConfig(main); break;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════════
+function renderDashboard(main) {
+  const total = tasks.length;
+  const inProg = tasks.filter(t => t.status === 'in progress').length;
+  const toDo = tasks.filter(t => t.status === 'to do').length;
+  const complete = tasks.filter(t => t.status === 'complete').length;
+  const overdue = tasks.filter(t => isOverdue(t)).length;
+  const pct = total > 0 ? Math.round(complete / total * 100) : 0;
+
+  // Priority breakdown
+  const priorities = {};
+  tasks.forEach(t => { priorities[t.priority] = (priorities[t.priority]||0) + 1; });
+
+  // By list
+  const byList = {};
+  tasks.forEach(t => {
+    const l = t.list || 'Uncategorised';
+    if (!byList[l]) byList[l] = { total: 0, complete: 0 };
+    byList[l].total++;
+    if (t.status === 'complete') byList[l].complete++;
+  });
+
+  // By person
+  const byPerson = {};
+  tasks.forEach(t => {
+    const people = t.assignees.length > 0 ? t.assignees : ['Unassigned'];
+    people.forEach(p => {
+      if (!byPerson[p]) byPerson[p] = { total: 0, overdue: 0 };
+      byPerson[p].total++;
+      if (isOverdue(t)) byPerson[p].overdue++;
+    });
+  });
+  const personSorted = Object.entries(byPerson).sort((a,b) => b[1].total - a[1].total);
+
+  // Top 5 overdue
+  const overdueList = tasks.filter(t => isOverdue(t))
+    .sort((a,b) => daysDiff(a.dueDate) - daysDiff(b.dueDate))
+    .slice(0, 5);
+
+  main.innerHTML = `
+    <div class="view-header">
+      <div class="view-title">Dashboard</div>
+      <div style="font-size:12px;color:#666;">${total} tasks across ${Object.keys(byList).length} lists</div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile kpi-navy"><div class="kpi-value">${total}</div><div class="kpi-label">Total Tasks</div></div>
+      <div class="kpi-tile kpi-blue"><div class="kpi-value">${inProg}</div><div class="kpi-label">In Progress</div></div>
+      <div class="kpi-tile kpi-navy"><div class="kpi-value">${toDo}</div><div class="kpi-label">To Do</div></div>
+      <div class="kpi-tile ${overdue > 0 ? 'kpi-red' : 'kpi-green'}"><div class="kpi-value">${overdue}</div><div class="kpi-label">Overdue</div></div>
+      <div class="kpi-tile kpi-green"><div class="kpi-value">${pct}%</div><div class="kpi-label">Complete</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="card">
+        <div class="card-header">Progress by List</div>
+        <div class="card-body" id="dash-by-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">Outstanding by Person</div>
+        <div class="card-body" id="dash-by-person"></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:4px;">
+      <div class="card">
+        <div class="card-header" style="background:var(--red);">Top 5 Most Overdue</div>
+        <div class="card-body" id="dash-overdue"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">Priority Breakdown</div>
+        <div class="card-body" id="dash-priority"></div>
+      </div>
+    </div>
+  `;
+
+  // Progress by list
+  const listEl = document.getElementById('dash-by-list');
+  let listHtml = '';
+  Object.entries(byList).forEach(([name, data]) => {
+    const pctL = data.total > 0 ? Math.round(data.complete / data.total * 100) : 0;
+    const short = name.length > 35 ? name.substring(0,35) + '...' : name;
+    listHtml += `
+      <div class="progress-row">
+        <div class="progress-label" title="${esc(name)}">${esc(short)}</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:${pctL}%;background:var(--green);"></div>
+          <div class="progress-bar-text">${data.complete}/${data.total}</div>
+        </div>
+      </div>`;
+  });
+  listEl.innerHTML = listHtml;
+
+  // By person
+  const personEl = document.getElementById('dash-by-person');
+  let personHtml = '';
+  personSorted.forEach(([name, data]) => {
+    const barW = Math.min(100, data.total * 4);
+    personHtml += `
+      <div class="progress-row">
+        <div class="progress-label">${esc(name)}</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:${barW}%;background:${data.overdue > 0 ? 'var(--red)' : 'var(--navy)'};"></div>
+          <div class="progress-bar-text">${data.total} (${data.overdue} overdue)</div>
+        </div>
+      </div>`;
+  });
+  personEl.innerHTML = personHtml;
+
+  // Top overdue
+  const odEl = document.getElementById('dash-overdue');
+  if (overdueList.length === 0) {
+    odEl.innerHTML = '<div style="text-align:center;color:var(--green);padding:20px;font-weight:bold;">No overdue tasks</div>';
+  } else {
+    let odHtml = '<table class="task-table"><thead><tr><th>Task</th><th>Assignee</th><th>Overdue</th></tr></thead><tbody>';
+    overdueList.forEach(t => {
+      const dd = Math.abs(daysDiff(t.dueDate));
+      odHtml += `<tr onclick="openModal('${t.id}')">
+        <td class="task-name-cell">${esc(t.name)}</td>
+        <td>${t.assignees.join(', ') || '—'}</td>
+        <td class="overdue-text">${dd}d</td>
+      </tr>`;
+    });
+    odHtml += '</tbody></table>';
+    odEl.innerHTML = odHtml;
+  }
+
+  // Priority
+  const priEl = document.getElementById('dash-priority');
+  const priOrder = ['URGENT','HIGH','NORMAL','LOW','none'];
+  const priColors = { URGENT: 'var(--red)', HIGH: 'var(--amber)', NORMAL: 'var(--navy)', LOW: '#999', none: '#ccc' };
+  let priHtml = '';
+  priOrder.forEach(p => {
+    const cnt = priorities[p] || 0;
+    if (cnt === 0) return;
+    const barW = Math.min(100, cnt * 3);
+    priHtml += `
+      <div class="progress-row">
+        <div class="progress-label" style="font-weight:bold;color:${priColors[p]}">${p === 'none' ? 'None' : p}</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:${barW}%;background:${priColors[p]};"></div>
+          <div class="progress-bar-text">${cnt}</div>
+        </div>
+      </div>`;
+  });
+  priEl.innerHTML = priHtml;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TASK TABLE (generic, with filters)
+// ══════════════════════════════════════════════════════════════════════════════
+function renderTaskList(main) {
+  main.innerHTML = `
+    <div class="view-header">
+      <div class="view-title">All Tasks</div>
+      <div>
+        <button class="btn btn-primary btn-sm" onclick="openModal(null)">+ Add Task</button>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <select id="f-space" onchange="applyFilters()"><option value="">All Spaces</option></select>
+      <select id="f-list" onchange="applyFilters()"><option value="">All Lists</option></select>
+      <select id="f-status" onchange="applyFilters()">
+        <option value="">All Statuses</option>
+        <option>to do</option><option>in progress</option><option>complete</option><option>blocked</option><option>on hold</option>
+      </select>
+      <select id="f-priority" onchange="applyFilters()">
+        <option value="">All Priorities</option>
+        <option>URGENT</option><option>HIGH</option><option>NORMAL</option><option>LOW</option><option>none</option>
+      </select>
+      <select id="f-assignee" onchange="applyFilters()"><option value="">All Assignees</option></select>
+      <input type="text" id="f-search" placeholder="Search tasks..." oninput="applyFilters()">
+    </div>
+    <div id="task-table-container"></div>
+  `;
+
+  // Populate filter dropdowns
+  const spaceSelect = document.getElementById('f-space');
+  SPACES.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; spaceSelect.appendChild(o); });
+  const listSelect = document.getElementById('f-list');
+  LISTS.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; listSelect.appendChild(o); });
+  const assSelect = document.getElementById('f-assignee');
+  TEAM.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; assSelect.appendChild(o); });
+  const unO = document.createElement('option'); unO.value = '__unassigned__'; unO.textContent = 'Unassigned'; assSelect.appendChild(unO);
+
+  applyFilters();
+}
+
+function applyFilters() {
+  const space = document.getElementById('f-space')?.value || '';
+  const list = document.getElementById('f-list')?.value || '';
+  const status = document.getElementById('f-status')?.value || '';
+  const priority = document.getElementById('f-priority')?.value || '';
+  const assignee = document.getElementById('f-assignee')?.value || '';
+  const search = (document.getElementById('f-search')?.value || '').toLowerCase();
+
+  let filtered = tasks.filter(t => {
+    if (space && t.space !== space) return false;
+    if (list && t.list !== list) return false;
+    if (status && t.status !== status) return false;
+    if (priority && t.priority !== priority) return false;
+    if (assignee === '__unassigned__' && t.assignees.length > 0) return false;
+    if (assignee && assignee !== '__unassigned__' && !t.assignees.includes(assignee)) return false;
+    if (search && !t.name.toLowerCase().includes(search) && !t.content.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  if (sortCol) {
+    filtered.sort((a,b) => {
+      let va = a[sortCol] || '';
+      let vb = b[sortCol] || '';
+      if (sortCol === 'dueDate') {
+        va = va || '9999-99-99'; vb = vb || '9999-99-99';
+      }
+      if (sortCol === 'priority') {
+        const priOrd = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3, none: 4 };
+        va = priOrd[va] ?? 5; vb = priOrd[vb] ?? 5;
+        return sortAsc ? va - vb : vb - va;
+      }
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return sortAsc ? -1 : 1;
+      if (va > vb) return sortAsc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  renderTable(filtered, document.getElementById('task-table-container'));
+}
+
+function renderTable(data, container) {
+  const arrow = (col) => sortCol === col ? (sortAsc ? ' ▲' : ' ▼') : '';
+  let html = `<table class="task-table"><thead><tr>
+    <th onclick="sortTable('name')">Task Name${arrow('name')}</th>
+    <th onclick="sortTable('assignees')">Assignee${arrow('assignees')}</th>
+    <th onclick="sortTable('priority')">Priority${arrow('priority')}</th>
+    <th>Status</th>
+    <th onclick="sortTable('dueDate')">Due Date${arrow('dueDate')}</th>
+    <th>Days</th>
+    <th onclick="sortTable('space')">Space${arrow('space')}</th>
+  </tr></thead><tbody>`;
+
+  if (data.length === 0) {
+    html += '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999;">No tasks match filters</td></tr>';
+  }
+
+  data.forEach(t => {
+    const priClass = `priority-${t.priority.toLowerCase()}`;
+    html += `<tr onclick="openModal('${t.id}')">
+      <td class="task-name-cell" title="${esc(t.name)}">${esc(t.name)}</td>
+      <td style="font-size:11px;">${t.assignees.join(', ') || '<span style="color:var(--amber)">Unassigned</span>'}</td>
+      <td class="${priClass}">${t.priority === 'none' ? '—' : t.priority}</td>
+      <td>${statusBadge(t)}</td>
+      <td style="font-size:12px;">${fmtDate(t.dueDate)}</td>
+      <td>${daysUntilText(t)}</td>
+      <td style="font-size:11px;" title="${esc(t.list||'')}">${esc(t.space ? t.space.substring(0,25) : '—')}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  // Add inline status change handlers
+  container.querySelectorAll('.inline-select').forEach(sel => {
+    sel.addEventListener('click', e => e.stopPropagation());
+    sel.addEventListener('change', e => {
+      e.stopPropagation();
+      const tid = sel.dataset.taskid;
+      const task = tasks.find(t => t.id === tid);
+      if (task) {
+        task.status = sel.value;
+        markDirty();
+        renderView();
+      }
+    });
+  });
+}
+
+function statusBadge(t) {
+  if (isOverdue(t)) return '<span class="badge badge-overdue">OVERDUE</span>';
+  switch(t.status) {
+    case 'to do': return '<span class="badge badge-todo">TO DO</span>';
+    case 'in progress': return '<span class="badge badge-progress">IN PROGRESS</span>';
+    case 'complete': return '<span class="badge badge-complete">COMPLETE</span>';
+    case 'blocked': return '<span class="badge badge-blocked">BLOCKED</span>';
+    case 'on hold': return '<span class="badge badge-onhold">ON HOLD</span>';
+    default: return `<span class="badge badge-todo">${esc(t.status)}</span>`;
+  }
+}
+
+function sortTable(col) {
+  if (sortCol === col) {
+    sortAsc = !sortAsc;
+  } else {
+    sortCol = col;
+    sortAsc = true;
+  }
+  applyFilters();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FILTERED LIST VIEW (reusable)
+// ══════════════════════════════════════════════════════════════════════════════
+function renderFilteredList(main, title, filterFn) {
+  const filtered = tasks.filter(filterFn);
+  main.innerHTML = `
+    <div class="view-header">
+      <div class="view-title">${esc(title)}</div>
+      <div style="font-size:13px;color:#666;">${filtered.length} tasks</div>
+    </div>
+    <div id="filtered-table-container"></div>
+  `;
+  renderTable(filtered, document.getElementById('filtered-table-container'));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STRATEGIC VIEW
+// ══════════════════════════════════════════════════════════════════════════════
+function renderStrategic(main) {
+  const groups = {};
+  const listOrder = [
+    '2026–2028 Strategic Outcomes',
+    'Q1 Strategic Priorities - Stabilise core operations to enable scalable growth.',
+    'Q2 Strategic Priorities - Start to scale for growth',
+    'List'
+  ];
+  tasks.forEach(t => {
+    const l = t.list || 'Other';
+    if (!groups[l]) groups[l] = [];
+    groups[l].push(t);
+  });
+
+  let html = '<div class="view-header"><div class="view-title">Strategic Overview</div></div>';
+
+  listOrder.forEach(listName => {
+    const items = groups[listName];
+    if (!items) return;
+    const complete = items.filter(t => t.status === 'complete').length;
+    const overdue = items.filter(t => isOverdue(t)).length;
+    const pct = items.length > 0 ? Math.round(complete / items.length * 100) : 0;
+    const displayName = listName === 'List' ? 'Operational Tasks' : listName;
+
+    html += `
+      <div class="strategic-section">
+        <div class="strategic-header">
+          <div class="strategic-title">${esc(displayName)}</div>
+          <div class="strategic-count">${complete}/${items.length} complete ${overdue > 0 ? `| <span class="overdue-text">${overdue} overdue</span>` : ''}</div>
+        </div>
+        <div class="progress-bar-bg" style="height:12px;margin-bottom:12px;">
+          <div class="progress-bar-fill" style="width:${pct}%;background:var(--green);"></div>
+          <div class="progress-bar-text">${pct}%</div>
+        </div>
+        <div id="strategic-${listName.replace(/[^a-z0-9]/gi,'_')}"></div>
+      </div>`;
+  });
+
+  main.innerHTML = html;
+
+  listOrder.forEach(listName => {
+    const items = groups[listName];
+    if (!items) return;
+    const containerId = `strategic-${listName.replace(/[^a-z0-9]/gi,'_')}`;
+    const container = document.getElementById(containerId);
+    if (container) renderTable(items, container);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PERSON VIEW
+// ══════════════════════════════════════════════════════════════════════════════
+function renderPersonView(main) {
+  const byPerson = {};
+  tasks.forEach(t => {
+    const people = t.assignees.length > 0 ? t.assignees : ['Unassigned'];
+    people.forEach(p => {
+      if (!byPerson[p]) byPerson[p] = [];
+      byPerson[p].push(t);
+    });
+  });
+
+  let html = '<div class="view-header"><div class="view-title">Tasks by Person</div></div><div class="person-grid">';
+
+  Object.entries(byPerson).sort((a,b) => b[1].length - a[1].length).forEach(([name, personTasks]) => {
+    const od = personTasks.filter(t => isOverdue(t)).length;
+    const ip = personTasks.filter(t => t.status === 'in progress').length;
+    const td = personTasks.filter(t => t.status === 'to do').length;
+    const co = personTasks.filter(t => t.status === 'complete').length;
+    const urgent = personTasks.filter(t => t.priority === 'URGENT').length;
+    const isUnassigned = name === 'Unassigned';
+
+    html += `
+      <div class="person-card" ${isUnassigned ? 'style="border:2px solid var(--amber);"' : ''}>
+        <div class="person-card-header">
+          <span>${esc(name)}</span>
+          ${od > 0 ? `<span class="overdue-count">${od} overdue</span>` : ''}
+        </div>
+        <div class="person-card-body">
+          <div class="person-stat"><span>Total</span><strong>${personTasks.length}</strong></div>
+          <div class="person-stat"><span>In Progress</span><strong style="color:var(--blue)">${ip}</strong></div>
+          <div class="person-stat"><span>To Do</span><strong>${td}</strong></div>
+          <div class="person-stat"><span>Complete</span><strong style="color:var(--green)">${co}</strong></div>
+          ${urgent > 0 ? `<div class="person-stat"><span>Urgent</span><strong style="color:var(--red)">${urgent}</strong></div>` : ''}
+          <button class="expand-btn" onclick="togglePersonTasks(this, '${esc(name)}')">Show tasks</button>
+          <div class="person-tasks-list" style="display:none;" data-person="${esc(name)}"></div>
+        </div>
+      </div>`;
+  });
+
+  html += '</div>';
+  main.innerHTML = html;
+}
+
+function togglePersonTasks(btn, personName) {
+  const listEl = btn.nextElementSibling;
+  if (listEl.style.display === 'none') {
+    listEl.style.display = 'block';
+    btn.textContent = 'Hide tasks';
+    const personTasks = tasks.filter(t =>
+      (t.assignees.length === 0 && personName === 'Unassigned') ||
+      t.assignees.includes(personName)
+    );
+    let html = '';
+    personTasks.forEach(t => {
+      html += `<div class="person-task-item" onclick="openModal('${t.id}')">
+        <span class="person-task-name">${esc(t.name)}</span>
+        ${statusBadge(t)}
+      </div>`;
+    });
+    listEl.innerHTML = html;
+  } else {
+    listEl.style.display = 'none';
+    btn.textContent = 'Show tasks';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WORKLOAD VIEW
+// ══════════════════════════════════════════════════════════════════════════════
+function renderWorkload(main) {
+  const byPerson = {};
+  tasks.forEach(t => {
+    const people = t.assignees.length > 0 ? t.assignees : ['Unassigned'];
+    people.forEach(p => {
+      if (!byPerson[p]) byPerson[p] = { total: 0, overdue: 0, urgent: 0, inProgress: 0 };
+      byPerson[p].total++;
+      if (isOverdue(t)) byPerson[p].overdue++;
+      if (t.priority === 'URGENT') byPerson[p].urgent++;
+      if (t.status === 'in progress') byPerson[p].inProgress++;
+    });
+  });
+
+  const sorted = Object.entries(byPerson).sort((a,b) => b[1].total - a[1].total);
+  const maxTotal = sorted.length > 0 ? sorted[0][1].total : 1;
+
+  let html = `<div class="view-header"><div class="view-title">Workload Distribution</div></div>
+    <div class="card"><div class="card-header">Tasks per Person</div><div class="card-body">`;
+
+  sorted.forEach(([name, data]) => {
+    const barW = Math.round(data.total / maxTotal * 100);
+    const odBar = data.total > 0 ? Math.round(data.overdue / data.total * 100) : 0;
+    html += `
+      <div class="progress-row" style="margin-bottom:14px;">
+        <div class="progress-label" style="width:160px;font-weight:bold;">${esc(name)}</div>
+        <div class="progress-bar-bg" style="height:24px;">
+          <div class="progress-bar-fill" style="width:${barW}%;background:var(--navy);"></div>
+          ${data.overdue > 0 ? `<div class="progress-bar-fill" style="width:${odBar}%;background:var(--red);position:absolute;top:0;left:0;opacity:0.7;"></div>` : ''}
+          <div class="progress-bar-text">${data.total} total | ${data.inProgress} active | ${data.overdue} overdue | ${data.urgent} urgent</div>
+        </div>
+      </div>`;
+  });
+
+  html += '</div></div>';
+  main.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TIMELINE VIEW
+// ══════════════════════════════════════════════════════════════════════════════
+function renderTimeline(main) {
+  const withDates = tasks.filter(t => t.dueDate).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  const noDates = tasks.filter(t => !t.dueDate);
+
+  const byMonth = {};
+  withDates.forEach(t => {
+    const m = monthYear(t.dueDate);
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(t);
+  });
+
+  let html = '<div class="view-header"><div class="view-title">Timeline</div></div>';
+
+  Object.entries(byMonth).forEach(([month, items]) => {
+    html += `<div class="timeline-month">
+      <div class="timeline-month-header">${esc(month)}</div>`;
+    items.forEach(t => {
+      const cls = isOverdue(t) ? 'overdue' : t.priority.toLowerCase();
+      html += `<div class="timeline-item ${cls}" onclick="openModal('${t.id}')">
+        <div class="timeline-date">${fmtDateShort(t.dueDate)}</div>
+        <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.name)}</div>
+        <div>${statusBadge(t)}</div>
+        <div style="width:80px;text-align:right;font-size:11px;">${t.assignees[0] || '—'}</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  if (noDates.length > 0) {
+    html += `<div class="timeline-month">
+      <div class="timeline-month-header" style="color:#999;">No Due Date</div>`;
+    noDates.forEach(t => {
+      html += `<div class="timeline-item no-date" onclick="openModal('${t.id}')">
+        <div class="timeline-date">—</div>
+        <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.name)}</div>
+        <div>${statusBadge(t)}</div>
+        <div style="width:80px;text-align:right;font-size:11px;">${t.assignees[0] || '—'}</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  main.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG VIEW
+// ══════════════════════════════════════════════════════════════════════════════
+function renderConfig(main) {
+  main.innerHTML = `
+    <div class="view-header"><div class="view-title">Configuration</div></div>
+
+    <div class="card">
+      <div class="card-header">Team Members</div>
+      <div class="card-body">
+        <table class="task-table">
+          <thead><tr><th>Name</th><th>Tasks Assigned</th><th>Overdue</th></tr></thead>
+          <tbody>
+            ${TEAM.map(name => {
+              const cnt = tasks.filter(t => t.assignees.includes(name)).length;
+              const od = tasks.filter(t => t.assignees.includes(name) && isOverdue(t)).length;
+              return `<tr><td>${esc(name)}</td><td>${cnt}</td><td class="${od > 0 ? 'overdue-text' : ''}">${od}</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header">Import / Export</div>
+      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-navy" onclick="exportJSON()">Backup (JSON)</button>
+        <button class="btn btn-navy" onclick="document.getElementById('import-file').click()">Restore (JSON)</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+        <button class="btn btn-outline" onclick="exportCSV()">Export CSV</button>
+        <button class="btn btn-danger" onclick="resetToSeed()">Reset to Original Data</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header">Supabase Status</div>
+      <div class="card-body" id="sb-status">Checking...</div>
+    </div>
+  `;
+
+  // Check Supabase
+  checkSupabase();
+}
+
+async function checkSupabase() {
+  const el = document.getElementById('sb-status');
+  if (!el) return;
+  if (!sb) {
+    el.innerHTML = '<span style="color:var(--amber);">Supabase client not initialised. Data is stored locally only.</span>';
+    return;
+  }
+  try {
+    const { data, error } = await sb.from(SB_TABLE).select('id', { count: 'exact', head: true });
+    if (error) {
+      el.innerHTML = `<span style="color:var(--amber);">Supabase table "${SB_TABLE}" not found or access denied. Create the table in Supabase to enable cloud sync.</span>`;
+    } else {
+      el.innerHTML = `<span style="color:var(--green);">Connected. Table "${SB_TABLE}" accessible.</span>`;
+    }
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red);">Connection failed: ${esc(e.message)}</span>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// IMPORT / EXPORT
+// ══════════════════════════════════════════════════════════════════════════════
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `abh-3year-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup downloaded');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (Array.isArray(data) && data.length > 0 && data[0].id) {
+        tasks = data;
+        markDirty();
+        saveToLocal();
+        renderView();
+        toast(`Imported ${data.length} tasks`);
+      } else {
+        toast('Invalid backup file', 'error');
+      }
+    } catch(err) {
+      toast('Failed to parse file', 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function exportCSV() {
+  const headers = ['Task ID','Task Name','Status','Priority','Assignees','Due Date','Start Date','Space','List','Content','Latest Comment'];
+  const rows = tasks.map(t => [
+    t.id, t.name, t.status, t.priority,
+    t.assignees.join('; '), fmtDate(t.dueDate), fmtDate(t.startDate),
+    t.space, t.list, t.content, t.latestComment
+  ]);
+  let csv = '\uFEFF'; // BOM
+  csv += headers.map(h => `"${h}"`).join(',') + '\n';
+  rows.forEach(r => {
+    csv += r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `abh-3year-tasks-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV exported');
+}
+
+function resetToSeed() {
+  if (!confirm('Reset all tasks to original imported data? This will discard all changes.')) return;
+  tasks = JSON.parse(JSON.stringify(SEED_TASKS));
+  markDirty();
+  saveToLocal();
+  renderView();
+  toast('Reset to original data');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TASK MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+function openModal(taskId) {
+  const modal = document.getElementById('task-modal');
+  const titleEl = document.getElementById('modal-title');
+  const deleteBtn = document.getElementById('modal-delete-btn');
+
+  // Populate space/list dropdowns
+  const spaceSelect = document.getElementById('modal-space');
+  spaceSelect.innerHTML = SPACES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+
+  const listSelect = document.getElementById('modal-list');
+  listSelect.innerHTML = LISTS.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
+
+  // Populate assignee checkboxes
+  const optionsDiv = document.getElementById('modal-assignee-options');
+  optionsDiv.innerHTML = TEAM.map(name =>
+    `<label><input type="checkbox" value="${esc(name)}"> ${esc(name)}</label>`
+  ).join('');
+
+  if (taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    titleEl.textContent = 'Edit Task';
+    deleteBtn.style.display = 'inline-block';
+    document.getElementById('modal-task-id').value = task.id;
+    document.getElementById('modal-name').value = task.name;
+    document.getElementById('modal-space').value = task.space;
+    document.getElementById('modal-list').value = task.list;
+    document.getElementById('modal-status').value = task.status;
+    document.getElementById('modal-priority').value = task.priority;
+    document.getElementById('modal-due').value = task.dueDate || '';
+    document.getElementById('modal-start').value = task.startDate || '';
+    document.getElementById('modal-content').value = task.content || '';
+    document.getElementById('modal-comment').value = task.latestComment || '';
+
+    // Set assignee checkboxes
+    optionsDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.checked = task.assignees.includes(cb.value);
+    });
+  } else {
+    titleEl.textContent = 'Add Task';
+    deleteBtn.style.display = 'none';
+    document.getElementById('modal-task-id').value = '';
+    document.getElementById('modal-name').value = '';
+    document.getElementById('modal-space').value = SPACES[0];
+    document.getElementById('modal-list').value = LISTS[0];
+    document.getElementById('modal-status').value = 'to do';
+    document.getElementById('modal-priority').value = 'NORMAL';
+    document.getElementById('modal-due').value = '';
+    document.getElementById('modal-start').value = '';
+    document.getElementById('modal-content').value = '';
+    document.getElementById('modal-comment').value = '';
+    optionsDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  }
+
+  updateAssigneeDisplay();
+  modal.classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('task-modal').classList.remove('open');
+  document.getElementById('modal-assignee-options').classList.remove('open');
+}
+
+function toggleMultiSelect(event) {
+  event.stopPropagation();
+  const opts = document.getElementById('modal-assignee-options');
+  opts.classList.toggle('open');
+}
+
+function updateAssigneeDisplay() {
+  const checked = Array.from(document.querySelectorAll('#modal-assignee-options input:checked')).map(cb => cb.value);
+  document.getElementById('modal-assignee-display').textContent = checked.length > 0 ? checked.join(', ') : 'Select assignees...';
+}
+
+// Close multi-select when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#modal-assignee-dropdown')) {
+    document.getElementById('modal-assignee-options').classList.remove('open');
+    updateAssigneeDisplay();
+  }
+});
+
+function saveTask() {
+  const id = document.getElementById('modal-task-id').value;
+  const name = document.getElementById('modal-name').value.trim();
+  if (!name) { toast('Task name is required', 'error'); return; }
+
+  const assignees = Array.from(document.querySelectorAll('#modal-assignee-options input:checked')).map(cb => cb.value);
+  const dueVal = document.getElementById('modal-due').value;
+  const startVal = document.getElementById('modal-start').value;
+
+  const data = {
+    name,
+    space: document.getElementById('modal-space').value,
+    list: document.getElementById('modal-list').value,
+    status: document.getElementById('modal-status').value,
+    priority: document.getElementById('modal-priority').value,
+    assignees,
+    dueDate: dueVal || null,
+    startDate: startVal || null,
+    content: document.getElementById('modal-content').value,
+    latestComment: document.getElementById('modal-comment').value,
+  };
+
+  if (id) {
+    // Update existing
+    const task = tasks.find(t => t.id === id);
+    if (task) Object.assign(task, data);
+  } else {
+    // New task
+    data.id = 'new_' + Date.now().toString(36) + Math.random().toString(36).substr(2,5);
+    data.commentCount = 0;
+    data.dateCreated = new Date().toISOString().slice(0,10);
+    data.dateUpdated = new Date().toISOString().slice(0,10);
+    data.dateClosed = null;
+    data.dateDone = null;
+    data.createdBy = 'ROBERT HARRIS';
+    data.folder = '';
+    tasks.push(data);
+  }
+
+  markDirty();
+  saveToLocal();
+  closeModal();
+  renderView();
+  toast(id ? 'Task updated' : 'Task created');
+}
+
+function deleteTask() {
+  const id = document.getElementById('modal-task-id').value;
+  if (!id) return;
+  if (!confirm('Delete this task permanently?')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  markDirty();
+  saveToLocal();
+  closeModal();
+  renderView();
+  toast('Task deleted');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════════════════════════════
+function esc(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Unsaved changes warning
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) {
+    e.preventDefault();
+    e.returnValue = 'You have unsaved changes.';
+  }
+});
+
+// Keyboard shortcut: Escape to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════════
+initData();
+</script>
+</body>
+</html>
