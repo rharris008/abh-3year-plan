@@ -2285,9 +2285,17 @@ function renderDashboard(main) {
   const overdue = tasks.filter(t => isOverdue(t)).length;
   const pct = total > 0 ? Math.round(complete / total * 100) : 0;
 
-  // Priority breakdown
+  // Priority breakdown — split overdue vs not-overdue per priority (completed tasks excluded
+  // since this card is about what needs working on)
   const priorities = {};
-  tasks.forEach(t => { priorities[t.priority] = (priorities[t.priority]||0) + 1; });
+  tasks.forEach(t => {
+    if (t.status === 'complete') return;
+    const p = t.priority || 'none';
+    if (!priorities[p]) priorities[p] = { total: 0, overdue: 0, notOverdue: 0 };
+    priorities[p].total++;
+    if (isOverdue(t)) priorities[p].overdue++;
+    else priorities[p].notOverdue++;
+  });
 
   // By pillar (one bucket per strategic pillar, in canonical order)
   const byPillar = {};
@@ -2365,7 +2373,11 @@ function renderDashboard(main) {
         <div class="card-body" id="dash-overdue"></div>
       </div>
       <div class="card">
-        <div class="card-header">Priority Breakdown</div>
+        <div class="card-header">Priority Breakdown <span style="font-weight:normal;font-size:10px;opacity:0.8;">(outstanding only)</span></div>
+        <div style="padding:6px 12px 2px;font-size:10px;color:#666;display:flex;gap:12px;align-items:center;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Overdue</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--navy);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Not overdue</span>
+        </div>
         <div class="card-body" id="dash-priority"></div>
       </div>
     </div>
@@ -2439,25 +2451,35 @@ function renderDashboard(main) {
     odEl.innerHTML = odHtml;
   }
 
-  // Priority
+  // Priority — stacked bar per priority, red = overdue, navy = not overdue
   const priEl = document.getElementById('dash-priority');
   const priOrder = ['URGENT','HIGH','NORMAL','LOW','none'];
-  const priColors = { URGENT: 'var(--red)', HIGH: 'var(--amber)', NORMAL: 'var(--navy)', LOW: '#999', none: '#ccc' };
-  let priHtml = '';
-  priOrder.forEach(p => {
-    const cnt = priorities[p] || 0;
-    if (cnt === 0) return;
-    const barW = Math.min(100, cnt * 3);
-    priHtml += `
-      <div class="progress-row" onclick="drillFromKpi('priority::${p}')" style="cursor:pointer;" title="Click to see outstanding ${p === 'none' ? 'unprioritised' : p} tasks">
-        <div class="progress-label" style="font-weight:bold;color:${priColors[p]}">${p === 'none' ? 'None' : p}</div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width:${barW}%;background:${priColors[p]};"></div>
-          <div class="progress-bar-text">${cnt}</div>
-        </div>
-      </div>`;
-  });
-  priEl.innerHTML = priHtml;
+  const rowsShown = priOrder.filter(p => (priorities[p] && priorities[p].total > 0));
+  if (rowsShown.length === 0) {
+    priEl.innerHTML = '<div style="text-align:center;color:#666;padding:16px;font-size:11px;">No outstanding tasks.</div>';
+  } else {
+    const maxTotal = Math.max(...rowsShown.map(p => priorities[p].total), 1);
+    let priHtml = '';
+    rowsShown.forEach(p => {
+      const data = priorities[p];
+      const totalW = Math.max(6, (data.total / maxTotal) * 100);
+      const overduePortion = data.total > 0 ? (data.overdue / data.total) * totalW : 0;
+      const notOverduePortion = totalW - overduePortion;
+      const labelColour = p === 'URGENT' ? 'var(--red)' : (p === 'HIGH' ? 'var(--amber)' : 'var(--navy)');
+      priHtml += `
+        <div class="progress-row" onclick="drillFromKpi('priority::${p}')" style="cursor:pointer;" title="Click to see outstanding ${p === 'none' ? 'unprioritised' : p} tasks">
+          <div class="progress-label" style="font-weight:bold;color:${labelColour};">${p === 'none' ? 'None' : p}</div>
+          <div class="progress-bar-bg">
+            <div style="display:flex;height:100%;width:${totalW}%;">
+              ${data.overdue > 0 ? `<div style="width:${(overduePortion/totalW)*100}%;background:var(--red);"></div>` : ''}
+              ${data.notOverdue > 0 ? `<div style="width:${(notOverduePortion/totalW)*100}%;background:var(--navy);"></div>` : ''}
+            </div>
+            <div class="progress-bar-text">${data.overdue}/${data.total} overdue</div>
+          </div>
+        </div>`;
+    });
+    priEl.innerHTML = priHtml;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
