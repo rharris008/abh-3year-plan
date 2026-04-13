@@ -8,7 +8,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ABH 3-Year Plan — 30 Day Bites</title>
+<title>ABH 3-Year Plan: 30 Day Bites</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ══ ABH BRAND TOKENS ════════════════════════════════════════════════════════ */
@@ -636,7 +636,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 <!-- ══ HEADER ═════════════════════════════════════════════════════════════ -->
 <header id="app-header">
   <div class="logo"><span>ABH</span></div>
-  <div class="title">3-Year Plan — 30 Day Bites</div>
+  <div class="title">3-Year Plan: 30 Day Bites</div>
   <div class="right">
     <div class="countdown" id="countdown"></div>
     <div id="save-indicator" class="clean">SAVED</div>
@@ -680,7 +680,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 </div>
 
 <!-- ══ FOOTER ═════════════════════════════════════════════════════════════ -->
-<footer id="app-footer">INTERNAL — NOT FOR DISTRIBUTION</footer>
+<footer id="app-footer">INTERNAL - NOT FOR DISTRIBUTION</footer>
 
 <!-- ══ TASK MODAL ═════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="task-modal">
@@ -763,7 +763,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 
 <script>
 // SUPABASE CONFIG
-// CMMS project — same as Shed Move and contacts
+// CMMS project: same as Shed Move and contacts
 const SB_URL = 'https://gdfbpvzatnqmzujagtqm.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkZmJwdnphdG5xbXp1amFndHFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzE3NTQsImV4cCI6MjA5MDIwNzc1NH0.O0XquoCFEaIL0xJZKGaPrFgfz42A_j1uKRUjhr6Zqvw';
 const SB_TABLE = 'abh_3year_tasks';
@@ -791,23 +791,23 @@ const SPACES = [
 ];
 
 const LISTS = [
-  'List', '2026–2028 Strategic Outcomes',
+  'List', '2026-2028 Strategic Outcomes',
   'Q1 Strategic Priorities - Stabilise core operations to enable scalable growth.',
   'Q2 Strategic Priorities - Start to scale for growth'
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
-// EMBEDDED TASK DATA — ALL 77 TASKS FROM CLICKUP CSV
+// EMBEDDED TASK DATA: ALL 77 TASKS FROM CLICKUP CSV
 // ══════════════════════════════════════════════════════════════════════════════
 const SEED_TASKS = [
-  {id:"86d20j2q2",name:"$150m revenue by Dec 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
-  {id:"86d20jajn",name:"$100m 12 month rolling Pureau revenue by December 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
-  {id:"86d20j2uv",name:"Cask operations in 2–3 states",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
-  {id:"86d20j2t2",name:"$50m Non-Bottle Revenue by Dec 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
-  {id:"86d20j8tj",name:"Canning Line Operational at 1 Shift/Day",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
-  {id:"86d20j2vg",name:"Direct to customer coverage 30–50% population",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
-  {id:"86d20j2wf",name:"Culture aligned to company values",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
-  {id:"86d20j4n8",name:"Have a clear recruitment and training programme",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026–2028 Strategic Outcomes"},
+  {id:"86d20j2q2",name:"$150m revenue by Dec 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
+  {id:"86d20jajn",name:"$100m 12 month rolling Pureau revenue by December 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
+  {id:"86d20j2uv",name:"Cask operations in 2-3 states",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
+  {id:"86d20j2t2",name:"$50m Non-Bottle Revenue by Dec 2028",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
+  {id:"86d20j8tj",name:"Canning Line Operational at 1 Shift/Day",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
+  {id:"86d20j2vg",name:"Direct to customer coverage 30-50% population",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
+  {id:"86d20j2wf",name:"Culture aligned to company values",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
+  {id:"86d20j4n8",name:"Have a clear recruitment and training programme",status:"to do",content:"",assignees:[],priority:"none",latestComment:"",commentCount:0,dueDate:null,startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-02-18",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"3-Year Target",list:"2026-2028 Strategic Outcomes"},
   {id:"86d20v98x",name:"Drip trays ordered to reduce water spillage",status:"in progress",content:"",assignees:["Jasmine Pereira"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-03-31",startDate:null,dateCreated:"2026-02-19",dateUpdated:"2026-02-19",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
   {id:"86d20jd43",name:"Get HMPS /Scholles technicians onsite to fix ongoing problems to get to consistent 70 pallets a shift",status:"in progress",content:"",assignees:["Ravin singh"],priority:"URGENT",latestComment:"Cask still an issue , trails on abbe cask still needs to improve followed by an trail .",commentCount:3,dueDate:"2026-04-15",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-04-01",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
   {id:"86d20k4wt",name:"All Staff to have clear Roles and responsibilities",status:"in progress",content:"",assignees:["Richard Carlick","ROBERT HARRIS"],priority:"URGENT",latestComment:"",commentCount:0,dueDate:"2026-03-31",startDate:null,dateCreated:"2026-02-18",dateUpdated:"2026-03-04",dateClosed:null,dateDone:null,createdBy:"ROBERT HARRIS",space:"ABH 3 Year $150m turnover goal",folder:"to 2026 Plans",list:"Q1 Strategic Priorities - Stabilise core operations to enable scalable growth."},
@@ -895,9 +895,9 @@ const TODAY = new Date();
 TODAY.setHours(0,0,0,0);
 
 function fmtDate(isoStr) {
-  if (!isoStr) return '—';
+  if (!isoStr) return '-';
   const d = new Date(isoStr);
-  if (isNaN(d)) return '—';
+  if (isNaN(d)) return '-';
   const dd = String(d.getDate()).padStart(2,'0');
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const yyyy = d.getFullYear();
@@ -905,9 +905,9 @@ function fmtDate(isoStr) {
 }
 
 function fmtDateShort(isoStr) {
-  if (!isoStr) return '—';
+  if (!isoStr) return '-';
   const d = new Date(isoStr);
-  if (isNaN(d)) return '—';
+  if (isNaN(d)) return '-';
   const dd = String(d.getDate()).padStart(2,'0');
   const mm = String(d.getMonth()+1).padStart(2,'0');
   return `${dd}/${mm}`;
@@ -1081,8 +1081,8 @@ function renderView() {
     case 'overdue': renderFilteredList(main, 'Overdue Tasks', t => isOverdue(t)); break;
     case 'mytasks': renderFilteredList(main, 'My Tasks (ROBERT HARRIS)', t => t.assignees.includes('ROBERT HARRIS')); break;
     case 'strategic': renderStrategic(main); break;
-    case 'q1': renderFilteredList(main, 'Q1 Priorities — Stabilise Core Operations', t => t.list && t.list.includes('Q1 Strategic')); break;
-    case 'q2': renderFilteredList(main, 'Q2 Priorities — Start to Scale for Growth', t => t.list && t.list.includes('Q2 Strategic')); break;
+    case 'q1': renderFilteredList(main, 'Q1 Priorities: Stabilise Core Operations', t => t.list && t.list.includes('Q1 Strategic')); break;
+    case 'q2': renderFilteredList(main, 'Q2 Priorities: Start to Scale for Growth', t => t.list && t.list.includes('Q2 Strategic')); break;
     case 'person': renderPersonView(main); break;
     case 'workload': renderWorkload(main); break;
     case 'gsd': renderFilteredList(main, 'Getting Shit Done', t => t.space === 'Getting Shit done'); break;
@@ -1215,7 +1215,7 @@ function renderDashboard(main) {
       const dd = Math.abs(daysDiff(t.dueDate));
       odHtml += `<tr onclick="openModal('${t.id}')">
         <td class="task-name-cell">${esc(t.name)}</td>
-        <td>${t.assignees.join(', ') || '—'}</td>
+        <td>${t.assignees.join(', ') || '-'}</td>
         <td class="overdue-text">${dd}d</td>
       </tr>`;
     });
@@ -1348,11 +1348,11 @@ function renderTable(data, container) {
     html += `<tr onclick="openModal('${t.id}')">
       <td class="task-name-cell" title="${esc(t.name)}">${esc(t.name)}</td>
       <td style="font-size:11px;">${t.assignees.join(', ') || '<span style="color:var(--amber)">Unassigned</span>'}</td>
-      <td class="${priClass}">${t.priority === 'none' ? '—' : t.priority}</td>
+      <td class="${priClass}">${t.priority === 'none' ? '-' : t.priority}</td>
       <td>${statusBadge(t)}</td>
       <td style="font-size:12px;">${fmtDate(t.dueDate)}</td>
       <td>${daysUntilText(t)}</td>
-      <td style="font-size:11px;" title="${esc(t.list||'')}">${esc(t.space ? t.space.substring(0,25) : '—')}</td>
+      <td style="font-size:11px;" title="${esc(t.list||'')}">${esc(t.space ? t.space.substring(0,25) : '-')}</td>
     </tr>`;
   });
 
@@ -1418,7 +1418,7 @@ function renderFilteredList(main, title, filterFn) {
 function renderStrategic(main) {
   const groups = {};
   const listOrder = [
-    '2026–2028 Strategic Outcomes',
+    '2026-2028 Strategic Outcomes',
     'Q1 Strategic Priorities - Stabilise core operations to enable scalable growth.',
     'Q2 Strategic Priorities - Start to scale for growth',
     'List'
@@ -1597,7 +1597,7 @@ function renderTimeline(main) {
         <div class="timeline-date">${fmtDateShort(t.dueDate)}</div>
         <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.name)}</div>
         <div>${statusBadge(t)}</div>
-        <div style="width:80px;text-align:right;font-size:11px;">${t.assignees[0] || '—'}</div>
+        <div style="width:80px;text-align:right;font-size:11px;">${t.assignees[0] || '-'}</div>
       </div>`;
     });
     html += '</div>';
@@ -1608,10 +1608,10 @@ function renderTimeline(main) {
       <div class="timeline-month-header" style="color:#999;">No Due Date</div>`;
     noDates.forEach(t => {
       html += `<div class="timeline-item no-date" onclick="openModal('${t.id}')">
-        <div class="timeline-date">—</div>
+        <div class="timeline-date">-</div>
         <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.name)}</div>
         <div>${statusBadge(t)}</div>
-        <div style="width:80px;text-align:right;font-size:11px;">${t.assignees[0] || '—'}</div>
+        <div style="width:80px;text-align:right;font-size:11px;">${t.assignees[0] || '-'}</div>
       </div>`;
     });
     html += '</div>';
