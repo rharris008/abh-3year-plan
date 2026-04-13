@@ -1075,8 +1075,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
     <div class="nav-item" data-view="workload">Workload</div>
 
     <div class="section-label">Teams</div>
-    <div class="nav-item" data-view="gsd">Getting Shit Done</div>
-    <div class="nav-item" data-view="monthend">Month End</div>
+    <div class="nav-item" data-view="gsd">Rob &amp; Richard</div>
     <div class="nav-item" data-view="finance">Finance Tasks</div>
 
     <div class="section-label">All</div>
@@ -1320,18 +1319,13 @@ let TEAMS = {
   },
   finance: {
     label: 'Finance',
-    members: ['Lisa Fontanot', 'Sharon Salt', 'Robert Harris'],
+    members: ['Lisa Fontanot', 'Sharon Salt', 'Issareeya Yeeka', 'Robert Harris'],
     spaces: ['Finance Task reallocations', 'Finance Team ongoing efficiency', 'Month end reminders'],
   },
   gsd: {
-    label: 'Getting Shit Done',
+    label: 'Rob & Richard',
     members: ['Robert Harris', 'Richard Carlick'],
     spaces: ['Getting Shit done'],
-  },
-  richardm: {
-    label: "Richard Magin's Tasks",
-    members: ['Richard Magin', 'Robert Harris'],
-    spaces: ["Richard Magin's Tasks"],
   },
   personal: {
     label: 'Personal',
@@ -2058,15 +2052,15 @@ function renderView() {
       case 'workload': renderWorkload(main); break;
       case 'gsd':
         if (!teamHasAccess('gsd')) { renderTeamBlocked(main, 'gsd'); break; }
-        renderFilteredList(main, 'Getting Shit Done', t => t.space === 'Getting Shit done');
-        break;
-      case 'monthend':
-        if (!teamHasAccess('monthend')) { renderTeamBlocked(main, 'monthend'); break; }
-        renderFilteredList(main, 'Month End Reminders', t => t.space === 'Month end reminders');
+        renderFilteredList(main, 'Rob & Richard', t => t.space === 'Getting Shit done');
         break;
       case 'finance':
         if (!teamHasAccess('finance')) { renderTeamBlocked(main, 'finance'); break; }
-        renderFilteredList(main, 'Finance Tasks', t => t.space === 'Finance Task reallocations' || t.space === 'Finance Team ongoing efficiency');
+        renderFilteredList(main, 'Finance Tasks', t =>
+          t.space === 'Finance Task reallocations'
+          || t.space === 'Finance Team ongoing efficiency'
+          || t.space === 'Month end reminders'
+        );
         break;
       case 'tasklist': renderTaskList(main); break;
       case 'timeline': renderTimeline(main); break;
@@ -2308,8 +2302,9 @@ function renderDashboard(main) {
   });
 
   // By person — window = 3 months back to 3 months forward. Only outstanding (not complete)
-  // tasks whose due date falls in that window count. Tasks with no due date are excluded
-  // from the person card because they're unactionable without a date.
+  // tasks whose due date falls in that window count. Only the Responsible person (assignees[0])
+  // is charged for the task — Accountable and Consulted people are not counted here.
+  // Tasks with no due date are excluded because they're unactionable without a date.
   const _now = new Date();
   const _winStart = new Date(_now.getFullYear(), _now.getMonth() - 3, 1);
   const _winEnd = new Date(_now.getFullYear(), _now.getMonth() + 3, _now.getDate());
@@ -2320,13 +2315,12 @@ function renderDashboard(main) {
     const d = new Date(t.dueDate);
     if (isNaN(d) || d < _winStart || d > _winEnd) return;
     const overdue = d < _now;
-    const raw = (t.assignees || []).map(a => normaliseAssignee(a)).filter(a => a && a.trim());
-    const people = raw.length > 0 ? raw : ['Unassigned'];
-    people.forEach(p => {
-      if (!byPerson[p]) byPerson[p] = { overdue: 0, upcoming: 0 };
-      if (overdue) byPerson[p].overdue++;
-      else byPerson[p].upcoming++;
-    });
+    // Only the Responsible person (first assignee). No fallback to Accountable/Consulted.
+    const responsible = normaliseAssignee((t.assignees || [])[0] || '');
+    const p = responsible && responsible.trim() ? responsible : 'Unassigned';
+    if (!byPerson[p]) byPerson[p] = { overdue: 0, upcoming: 0 };
+    if (overdue) byPerson[p].overdue++;
+    else byPerson[p].upcoming++;
   });
   const personSorted = Object.entries(byPerson)
     .map(([name, d]) => [name, { ...d, total: d.overdue + d.upcoming }])
@@ -2620,6 +2614,12 @@ function sortTasksInPlace(list) {
     if (sortCol === 'priority') {
       const priOrd = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3, none: 4 };
       va = priOrd[va] ?? 5; vb = priOrd[vb] ?? 5;
+      return sortAsc ? va - vb : vb - va;
+    }
+    if (sortCol === 'status') {
+      // Logical order: outstanding first (to do, in progress, blocked, on hold), complete last
+      const stOrd = { 'to do': 0, 'in progress': 1, 'blocked': 2, 'on hold': 3, 'complete': 4 };
+      va = stOrd[va] ?? 5; vb = stOrd[vb] ?? 5;
       return sortAsc ? va - vb : vb - va;
     }
     if (typeof va === 'string') va = va.toLowerCase();
