@@ -113,6 +113,30 @@ input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
   color: var(--dktext);
   background: var(--white);
 }
+#app-header .rev-chip {
+  background: var(--red);
+  color: var(--white);
+  padding: 5px 14px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: help;
+  box-shadow: 0 2px 6px rgba(192,57,43,0.4);
+}
+#app-header .rev-chip-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255,255,255,0.85);
+  font-weight: bold;
+  line-height: 1;
+}
+#app-header .rev-chip-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--white);
+  line-height: 1.2;
+  margin-top: 2px;
+}
 #app-header .countdown {
   background: rgba(255,255,255,0.1);
   padding: 4px 12px;
@@ -886,6 +910,10 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
     <div class="title">3 Year Plan - $150m Turnover Goal</div>
   </div>
   <div class="right">
+    <div class="rev-chip" id="rev-chip">
+      <div class="rev-chip-label">$ / day to goal</div>
+      <div class="rev-chip-value">$0</div>
+    </div>
     <button class="btn btn-sm btn-success" onclick="openModal(null)">+ Add Task</button>
     <div class="person-selector">
       <label for="person-filter">Viewing as</label>
@@ -1454,7 +1482,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-pillars-v2';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-quarter-rev-v3';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1578,6 +1606,7 @@ async function initData() {
   // Backfill pillars on any task missing one (safety net for legacy data)
   backfillPillars();
   populatePersonFilter();
+  updateRevenueChip();
   renderView();
 }
 
@@ -1704,6 +1733,39 @@ function renderView() {
   } finally {
     restoreAllTasks();
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REVENUE GOAL TRACKER
+// ══════════════════════════════════════════════════════════════════════════════
+const REVENUE_GOAL = 150_000_000;          // $150m by Dec 2028
+const GOAL_END_DATE = '2028-12-31';
+// YTD revenue: placeholder until the NetSuite KPI scraper writes real data to Supabase
+let _ytdRevenue = 50_000_000;
+
+function dailyRevenueNeeded() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const end = new Date(GOAL_END_DATE);
+  const days = Math.max(1, Math.ceil((end - today) / 86400000));
+  const remaining = Math.max(0, REVENUE_GOAL - _ytdRevenue);
+  return { days, remaining, perDay: remaining / days };
+}
+
+function fmtMoney(n) {
+  if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(1) + 'm';
+  if (n >= 1_000) return '$' + Math.round(n / 1_000).toLocaleString() + 'k';
+  return '$' + Math.round(n).toLocaleString();
+}
+function fmtMoneyExact(n) {
+  return '$' + Math.round(n).toLocaleString('en-AU');
+}
+
+function updateRevenueChip() {
+  const el = document.getElementById('rev-chip');
+  if (!el) return;
+  const r = dailyRevenueNeeded();
+  el.querySelector('.rev-chip-value').textContent = fmtMoneyExact(r.perDay);
+  el.title = `${fmtMoneyExact(r.remaining)} remaining to ${fmtMoney(REVENUE_GOAL)} goal over ${r.days} days. Based on YTD revenue of ${fmtMoneyExact(_ytdRevenue)}.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
