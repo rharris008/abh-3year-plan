@@ -2927,8 +2927,9 @@ function renderWorkload(main) {
   sorted.forEach(([name, data]) => {
     const barW = Math.round(data.total / maxTotal * 100);
     const odBar = data.total > 0 ? Math.round(data.overdue / data.total * 100) : 0;
+    const safeName = esc(name).replace(/'/g, '&apos;');
     html += `
-      <div class="progress-row" style="margin-bottom:14px;">
+      <div class="progress-row" style="margin-bottom:14px;cursor:pointer;" onclick="drillFromKpi('person::${safeName}')" title="Click to see ${esc(name)}'s outstanding tasks">
         <div class="progress-label" style="width:160px;font-weight:bold;">${esc(name)}</div>
         <div class="progress-bar-bg" style="height:24px;">
           <div class="progress-bar-fill" style="width:${barW}%;background:var(--navy);"></div>
