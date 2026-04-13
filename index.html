@@ -738,6 +738,98 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 #sidebar::-webkit-scrollbar { width: 4px; }
 #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
+/* ══ REVENUE THERMOMETER (dashboard hero) ════════════════════════════════════ */
+.rev-thermo-card {
+  background: linear-gradient(135deg, var(--navy) 0%, #253b63 100%);
+  border-radius: 10px;
+  padding: 22px 28px;
+  margin-bottom: 20px;
+  color: var(--white);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  display: flex;
+  align-items: stretch;
+  gap: 28px;
+}
+.rev-thermo-card .rt-left {
+  flex: 1;
+  min-width: 0;
+}
+.rev-thermo-card .rt-right {
+  flex-shrink: 0;
+  width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rt-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--blue);
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+.rt-headline {
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.rt-subline {
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 14px;
+}
+.rt-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rt-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+.rt-bar-label {
+  width: 110px;
+  color: rgba(255,255,255,0.85);
+  flex-shrink: 0;
+}
+.rt-bar-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.rt-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s;
+}
+.rt-bar-fill.target { background: var(--green); }
+.rt-bar-fill.forecast { background: var(--amber); }
+.rt-bar-fill.gap { background: var(--red); }
+.rt-bar-value {
+  width: 72px;
+  text-align: right;
+  font-weight: bold;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.rt-svg {
+  height: 180px;
+  width: 100px;
+}
+.rt-svg .rt-tube-bg { fill: rgba(255,255,255,0.1); }
+.rt-svg .rt-fill { fill: var(--amber); transition: all 0.6s; }
+.rt-svg .rt-target-line { stroke: var(--green); stroke-width: 2; stroke-dasharray: 3 2; }
+.rt-svg .rt-tick { stroke: rgba(255,255,255,0.4); stroke-width: 1; }
+.rt-svg .rt-label { fill: rgba(255,255,255,0.7); font-size: 9px; font-family: Arial, sans-serif; }
+.rt-svg .rt-bulb { fill: var(--amber); }
+
 /* ══ QUARTER BANNER (dashboard period selector) ══════════════════════════════ */
 .quarter-banner {
   background: linear-gradient(135deg, var(--navy) 0%, #253b63 100%);
@@ -1615,7 +1707,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-rev-chip-v12';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-thermo-v13';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -2009,6 +2101,87 @@ function updateRevenueChip() {
     `Multiplier needed: ${multiplier.toFixed(1)}x current forecast trajectory`;
 }
 
+// Build the SVG thermometer showing forecast TTM vs $150m target
+function renderRevenueThermo() {
+  const forecastDec28 = computeTTM(GOAL_END_YEAR_MONTH);
+  const gap = REVENUE_GOAL - forecastDec28;
+  const pct = Math.min(100, forecastDec28 / REVENUE_GOAL * 100);
+  const multiplier = forecastDec28 > 0 ? REVENUE_GOAL / forecastDec28 : 0;
+
+  // Current TTM: use the most recent closed month we have data for
+  // (latest actual month in kpi_actuals, else latest "Actual" type in kpi_monthly_forecast)
+  const months = Object.keys(_forecastByMonth).sort();
+  let currentMonth = null;
+  for (const m of months) {
+    if (_actualsByMonth[m] || (_forecastByMonth[m] && _forecastByMonth[m].data_type === 'Actual')) {
+      currentMonth = m;
+    }
+  }
+  const currentTTM = currentMonth ? computeTTM(currentMonth) : 0;
+
+  // SVG sizing
+  const svgH = 180, svgW = 100;
+  const tubeX = 40, tubeW = 20;
+  const tubeTop = 10, tubeBot = 150;
+  const bulbCX = tubeX + tubeW / 2, bulbCY = tubeBot + 14, bulbR = 16;
+  const tubeH = tubeBot - tubeTop;
+
+  const fillH = tubeH * (forecastDec28 / REVENUE_GOAL);
+  const fillY = tubeBot - fillH;
+
+  // Tick marks at 0, 25, 50, 75, 100, 125, 150
+  const ticks = [0, 25, 50, 75, 100, 125, 150];
+  const tickEls = ticks.map(v => {
+    const y = tubeBot - tubeH * (v / 150);
+    return `<line class="rt-tick" x1="${tubeX - 6}" y1="${y}" x2="${tubeX}" y2="${y}"/>
+            <text class="rt-label" x="${tubeX - 10}" y="${y + 3}" text-anchor="end">$${v}m</text>`;
+  }).join('');
+
+  const svg = `
+    <svg class="rt-svg" viewBox="0 0 ${svgW} ${svgH + 20}" xmlns="http://www.w3.org/2000/svg">
+      <rect class="rt-tube-bg" x="${tubeX}" y="${tubeTop}" width="${tubeW}" height="${tubeH}" rx="10"/>
+      <rect class="rt-fill" x="${tubeX}" y="${fillY}" width="${tubeW}" height="${fillH}" rx="10"/>
+      <line class="rt-target-line" x1="${tubeX - 4}" y1="${tubeTop}" x2="${tubeX + tubeW + 4}" y2="${tubeTop}"/>
+      <circle class="rt-bulb" cx="${bulbCX}" cy="${bulbCY}" r="${bulbR}"/>
+      ${tickEls}
+    </svg>
+  `;
+
+  return `
+    <div class="rev-thermo-card">
+      <div class="rt-left">
+        <div class="rt-title">Revenue to $150m Goal (Dec 2028 TTM)</div>
+        <div class="rt-headline">${fmtMoney(forecastDec28)} <span style="color:rgba(255,255,255,0.5);font-weight:normal;font-size:20px;"> / ${fmtMoney(REVENUE_GOAL)}</span></div>
+        <div class="rt-subline">Current boring-forecast trajectory at Dec 2028 TTM. Business needs ${multiplier.toFixed(1)}x this to hit goal.</div>
+        <div class="rt-bars">
+          <div class="rt-bar-row">
+            <div class="rt-bar-label">Target</div>
+            <div class="rt-bar-track"><div class="rt-bar-fill target" style="width:100%;"></div></div>
+            <div class="rt-bar-value">${fmtMoney(REVENUE_GOAL)}</div>
+          </div>
+          <div class="rt-bar-row">
+            <div class="rt-bar-label">Forecast Dec 28</div>
+            <div class="rt-bar-track"><div class="rt-bar-fill forecast" style="width:${pct}%;"></div></div>
+            <div class="rt-bar-value">${fmtMoney(forecastDec28)}</div>
+          </div>
+          <div class="rt-bar-row">
+            <div class="rt-bar-label">Gap to goal</div>
+            <div class="rt-bar-track"><div class="rt-bar-fill gap" style="width:${Math.max(0, 100 - pct)}%;"></div></div>
+            <div class="rt-bar-value">${fmtMoney(gap)}</div>
+          </div>
+          ${currentTTM > 0 ? `
+          <div class="rt-bar-row">
+            <div class="rt-bar-label">Current TTM</div>
+            <div class="rt-bar-track"><div class="rt-bar-fill" style="width:${currentTTM / REVENUE_GOAL * 100}%;background:var(--blue);"></div></div>
+            <div class="rt-bar-value">${fmtMoney(currentTTM)}</div>
+          </div>` : ''}
+        </div>
+      </div>
+      <div class="rt-right">${svg}</div>
+    </div>
+  `;
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // QUARTER HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2106,6 +2279,8 @@ function renderDashboard(main) {
       <div class="view-title">Dashboard</div>
       <div style="font-size:12px;color:#666;">${total} tasks across ${PILLARS.length} pillars</div>
     </div>
+
+    ${renderRevenueThermo()}
 
     <div class="kpi-row">
       <div class="kpi-tile kpi-navy" onclick="drillFromKpi('')" title="Click to see all tasks"><div class="kpi-value">${total}</div><div class="kpi-label">Total Tasks</div></div>
