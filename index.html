@@ -1565,13 +1565,14 @@ function renderDashboard(main) {
   const priorities = {};
   tasks.forEach(t => { priorities[t.priority] = (priorities[t.priority]||0) + 1; });
 
-  // By list
-  const byList = {};
+  // By pillar (one bucket per strategic pillar, in canonical order)
+  const byPillar = {};
+  PILLARS.forEach(p => { byPillar[p] = { total: 0, complete: 0 }; });
   tasks.forEach(t => {
-    const l = t.list || 'Uncategorised';
-    if (!byList[l]) byList[l] = { total: 0, complete: 0 };
-    byList[l].total++;
-    if (t.status === 'complete') byList[l].complete++;
+    const p = t.pillar || 'Unassigned';
+    if (!byPillar[p]) byPillar[p] = { total: 0, complete: 0 };
+    byPillar[p].total++;
+    if (t.status === 'complete') byPillar[p].complete++;
   });
 
   // By person
@@ -1593,7 +1594,7 @@ function renderDashboard(main) {
   main.innerHTML = `
     <div class="view-header">
       <div class="view-title">Dashboard</div>
-      <div style="font-size:12px;color:#666;">${total} tasks across ${Object.keys(byList).length} lists</div>
+      <div style="font-size:12px;color:#666;">${total} tasks across ${PILLARS.length} pillars</div>
     </div>
 
     <div class="kpi-row">
@@ -1606,8 +1607,8 @@ function renderDashboard(main) {
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
       <div class="card">
-        <div class="card-header">Progress by List</div>
-        <div class="card-body" id="dash-by-list"></div>
+        <div class="card-header">Progress by Pillar</div>
+        <div class="card-body" id="dash-by-pillar"></div>
       </div>
       <div class="card">
         <div class="card-header">Outstanding by Person</div>
@@ -1627,17 +1628,20 @@ function renderDashboard(main) {
     </div>
   `;
 
-  // Progress by list
-  const listEl = document.getElementById('dash-by-list');
+  // Progress by pillar
+  const listEl = document.getElementById('dash-by-pillar');
   let listHtml = '';
-  Object.entries(byList).forEach(([name, data]) => {
+  Object.entries(byPillar).forEach(([name, data]) => {
+    if (data.total === 0 && name !== 'Unassigned') {
+      // still show empty pillars so the structure is visible
+    }
     const pctL = data.total > 0 ? Math.round(data.complete / data.total * 100) : 0;
-    const short = name.length > 35 ? name.substring(0,35) + '...' : name;
+    const colour = PILLAR_COLOURS[name] || '#999';
     listHtml += `
-      <div class="progress-row">
-        <div class="progress-label" title="${esc(name)}">${esc(short)}</div>
+      <div class="progress-row" onclick="setPillarFilter('${esc(name)}')" style="cursor:pointer;">
+        <div class="progress-label" title="${esc(name)}">${esc(name)}</div>
         <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width:${pctL}%;background:var(--green);"></div>
+          <div class="progress-bar-fill" style="width:${pctL}%;background:${colour};"></div>
           <div class="progress-bar-text">${data.complete}/${data.total}</div>
         </div>
       </div>`;
