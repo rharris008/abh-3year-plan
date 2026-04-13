@@ -259,6 +259,12 @@ input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
   padding: 18px 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.kpi-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.14);
 }
 .kpi-tile .kpi-value {
   font-size: 32px;
@@ -1484,7 +1490,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-revert-quarter-v5';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-kpi-drill-v6';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1866,11 +1872,11 @@ function renderDashboard(main) {
     </div>
 
     <div class="kpi-row">
-      <div class="kpi-tile kpi-navy"><div class="kpi-value">${total}</div><div class="kpi-label">Total Tasks</div></div>
-      <div class="kpi-tile kpi-blue"><div class="kpi-value">${inProg}</div><div class="kpi-label">In Progress</div></div>
-      <div class="kpi-tile kpi-navy"><div class="kpi-value">${toDo}</div><div class="kpi-label">To Do</div></div>
-      <div class="kpi-tile ${overdue > 0 ? 'kpi-red' : 'kpi-green'}"><div class="kpi-value">${overdue}</div><div class="kpi-label">Overdue</div></div>
-      <div class="kpi-tile kpi-green"><div class="kpi-value">${pct}%</div><div class="kpi-label">Complete</div></div>
+      <div class="kpi-tile kpi-navy" onclick="drillFromKpi('')" title="Click to see all tasks"><div class="kpi-value">${total}</div><div class="kpi-label">Total Tasks</div></div>
+      <div class="kpi-tile kpi-blue" onclick="drillFromKpi('in progress')" title="Click to see in-progress tasks"><div class="kpi-value">${inProg}</div><div class="kpi-label">In Progress</div></div>
+      <div class="kpi-tile kpi-navy" onclick="drillFromKpi('to do')" title="Click to see to-do tasks"><div class="kpi-value">${toDo}</div><div class="kpi-label">To Do</div></div>
+      <div class="kpi-tile ${overdue > 0 ? 'kpi-red' : 'kpi-green'}" onclick="drillFromKpi('overdue')" title="Click to see overdue tasks"><div class="kpi-value">${overdue}</div><div class="kpi-label">Overdue</div></div>
+      <div class="kpi-tile kpi-green" onclick="drillFromKpi('complete')" title="Click to see completed tasks"><div class="kpi-value">${pct}%</div><div class="kpi-label">Complete</div></div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -2014,6 +2020,12 @@ function renderTaskList(main) {
   if (_pillarPrefilter) {
     pillarSelect.value = _pillarPrefilter;
     _pillarPrefilter = null;
+  }
+  // Honour status pre-filter coming from a dashboard KPI tile click-through
+  if (_statusPrefilter !== null) {
+    const statusSel = document.getElementById('f-status');
+    if (statusSel) statusSel.value = _statusPrefilter;
+    _statusPrefilter = null;
   }
 
   applyFilters();
@@ -2270,6 +2282,25 @@ function setPillarFilter(pillarName) {
   renderView();
 }
 let _pillarPrefilter = null;
+let _statusPrefilter = null;
+
+// Called from dashboard KPI tile onclick. Routes to the right drill-down view.
+function drillFromKpi(kind) {
+  document.querySelectorAll('#sidebar .nav-item').forEach(i => i.classList.remove('active'));
+  if (kind === 'overdue') {
+    currentView = 'overdue';
+    const item = document.querySelector('#sidebar .nav-item[data-view="overdue"]');
+    if (item) item.classList.add('active');
+    renderView();
+    return;
+  }
+  // status-based drill: go to All Tasks with f-status pre-set
+  _statusPrefilter = kind;  // 'to do' | 'in progress' | 'complete' | '' (total)
+  currentView = 'tasklist';
+  const item = document.querySelector('#sidebar .nav-item[data-view="tasklist"]');
+  if (item) item.classList.add('active');
+  renderView();
+}
 
 function renderStrategic(main) {
   const groups = {};
