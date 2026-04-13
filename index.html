@@ -1594,7 +1594,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-subtasks-drill-v9';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-field-map-v10';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1642,11 +1642,64 @@ function normaliseTaskAssignees(t) {
   return t;
 }
 
+// Field mapping between JS camelCase and Supabase snake_case columns.
+function taskToDbRow(t) {
+  return {
+    id: t.id,
+    name: t.name || '',
+    status: t.status || 'to do',
+    content: t.content || '',
+    assignees: t.assignees || [],
+    priority: t.priority || 'none',
+    latest_comment: t.latestComment || '',
+    comment_count: t.commentCount || 0,
+    due_date: t.dueDate || null,
+    start_date: t.startDate || null,
+    date_created: t.dateCreated || null,
+    date_updated: t.dateUpdated || null,
+    date_closed: t.dateClosed || null,
+    date_done: t.dateDone || null,
+    created_by: t.createdBy || '',
+    space: t.space || '',
+    folder: t.folder || '',
+    list: t.list || '',
+    pillar: t.pillar || null,
+    parent_id: t.parentId || null,
+    parent_name: t.parentName || null,
+  };
+}
+
+function dbRowToTask(r) {
+  return {
+    id: r.id,
+    name: r.name || '',
+    status: r.status || 'to do',
+    content: r.content || '',
+    assignees: typeof r.assignees === 'string' ? JSON.parse(r.assignees || '[]') : (r.assignees || []),
+    priority: r.priority || 'none',
+    latestComment: r.latest_comment || '',
+    commentCount: r.comment_count || 0,
+    dueDate: r.due_date || null,
+    startDate: r.start_date || null,
+    dateCreated: r.date_created || null,
+    dateUpdated: r.date_updated || null,
+    dateClosed: r.date_closed || null,
+    dateDone: r.date_done || null,
+    createdBy: r.created_by || '',
+    space: r.space || '',
+    folder: r.folder || '',
+    list: r.list || '',
+    pillar: r.pillar || null,
+    parentId: r.parent_id || null,
+    parentName: r.parent_name || '',
+  };
+}
+
 async function saveToSupabase() {
   if (!sb) return false;
   try {
     const { error } = await sb.from(SB_TABLE).upsert(
-      tasks.map(t => ({ ...t, assignees: JSON.stringify(t.assignees) })),
+      tasks.map(taskToDbRow),
       { onConflict: 'id' }
     );
     if (error) { console.error('Supabase save error:', error); return false; }
@@ -1659,10 +1712,7 @@ async function loadFromSupabase() {
   try {
     const { data, error } = await sb.from(SB_TABLE).select('*');
     if (error || !data || data.length === 0) return null;
-    return data.map(t => ({
-      ...t,
-      assignees: typeof t.assignees === 'string' ? JSON.parse(t.assignees) : (t.assignees || [])
-    }));
+    return data.map(dbRowToTask);
   } catch(e) { return null; }
 }
 
