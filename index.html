@@ -702,6 +702,28 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 #sidebar::-webkit-scrollbar { width: 4px; }
 #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
+/* ══ RACE ROLE BADGES (R = Responsible, A = Accountable, C = Consulted) ══════ */
+.role-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: bold;
+  margin-right: 4px;
+  color: var(--white);
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+}
+.role-badge.role-r { background: var(--blue); }
+.role-badge.role-a { background: var(--navy); }
+.role-badge.role-c { background: #999; }
+.role-legend {
+  font-size: 10px;
+  color: #666;
+  margin-bottom: 8px;
+}
+.role-legend .role-badge { font-size: 9px; }
+
 /* ══ PILLAR CARDS ════════════════════════════════════════════════════════════ */
 .pillar-grid {
   display: grid;
@@ -898,9 +920,20 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
         </div>
       </div>
 
-      <label>Assignee(s)</label>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1">
+          <label>Responsible (R) <span style="color:#999;font-weight:normal;font-size:11px;">does the work</span></label>
+          <select id="modal-responsible"><option value="">(none)</option></select>
+        </div>
+        <div style="flex:1">
+          <label>Accountable (A) <span style="color:#999;font-weight:normal;font-size:11px;">signs off</span></label>
+          <select id="modal-accountable"><option value="">(none)</option></select>
+        </div>
+      </div>
+
+      <label>Consulted (C) <span style="color:#999;font-weight:normal;font-size:11px;">input or contributors</span></label>
       <div class="multi-select-dropdown" id="modal-assignee-dropdown" onclick="toggleMultiSelect(event)">
-        <span id="modal-assignee-display">Select assignees...</span>
+        <span id="modal-assignee-display">Select consulted contributors...</span>
         <div class="multi-select-options" id="modal-assignee-options"></div>
       </div>
 
@@ -1246,9 +1279,50 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
+const CACHE_VERSION = '2026-04-13-race';   // bump this to invalidate stale caches
+const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(tasks)); } catch(e) {}
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(tasks));
+    localStorage.setItem(LS_VERSION_KEY, CACHE_VERSION);
+  } catch(e) {}
+}
+
+// Aliases for legacy / short / case variants → canonical TEAM names
+const NAME_ALIASES = {
+  'kate': 'Kate Harris',
+  'rob': 'Robert Harris',
+  'rob harris': 'Robert Harris',
+  'robert': 'Robert Harris',
+  'ravin': 'Ravin Singh',
+  'sharon': 'Sharon Salt',
+  'lisa': 'Lisa Fontanot',
+  'jeremy': 'Jeremy Wheeler',
+  'jasmine': 'Jasmine Pereira',
+  'caine': 'Caine Bowers',
+  'ploy': 'Issareeya Yeeka',
+  'issareeya': 'Issareeya Yeeka',
+  'richard': 'Richard Carlick',  // default Richard. If both Richards in same task, second is Magin per data.
+};
+
+// Normalise assignee names to canonical TEAM casing (handles legacy ROBERT HARRIS, ravin singh, kate, etc.)
+function normaliseAssignee(name) {
+  if (!name) return name;
+  const target = name.toLowerCase().trim();
+  // Direct TEAM match (case-insensitive)
+  const direct = TEAM.find(t => t.toLowerCase() === target);
+  if (direct) return direct;
+  // Alias map lookup
+  if (NAME_ALIASES[target]) return NAME_ALIASES[target];
+  return name;
+}
+function normaliseTaskAssignees(t) {
+  if (t && Array.isArray(t.assignees)) {
+    t.assignees = t.assignees.map(normaliseAssignee);
+  }
+  if (t && t.createdBy) t.createdBy = normaliseAssignee(t.createdBy);
+  return t;
 }
 
 async function saveToSupabase() {
@@ -1277,6 +1351,14 @@ async function loadFromSupabase() {
 
 function loadFromLocal() {
   try {
+    // Cache version check — if the data was cached before the latest schema change, flush it
+    const cachedVersion = localStorage.getItem(LS_VERSION_KEY);
+    if (cachedVersion !== CACHE_VERSION) {
+      console.log('[cache] version mismatch, flushing localStorage tasks');
+      localStorage.removeItem(LS_KEY);
+      localStorage.removeItem(LS_VERSION_KEY);
+      return null;
+    }
     const raw = localStorage.getItem(LS_KEY);
     if (raw) return JSON.parse(raw);
   } catch(e) {}
@@ -1316,6 +1398,8 @@ async function initData() {
       toast('Initialised with seed data', 'info');
     }
   }
+  // Always normalise assignee casing to match TEAM (handles legacy ROBERT HARRIS / ravin singh / kate)
+  tasks.forEach(normaliseTaskAssignees);
   populatePersonFilter();
   renderView();
 }
@@ -1564,7 +1648,7 @@ function renderDashboard(main) {
       const dd = Math.abs(daysDiff(t.dueDate));
       odHtml += `<tr onclick="openModal('${t.id}')">
         <td class="task-name-cell">${esc(t.name)}</td>
-        <td>${t.assignees.join(', ') || '-'}</td>
+        <td>${formatAssignees(t.assignees, {compact: true})}</td>
         <td class="overdue-text">${dd}d</td>
       </tr>`;
     });
@@ -1702,7 +1786,7 @@ function renderTable(data, container) {
     const priClass = `priority-${t.priority.toLowerCase()}`;
     html += `<tr onclick="openModal('${t.id}')">
       <td class="task-name-cell" title="${esc(t.name)}">${esc(t.name)}</td>
-      <td style="font-size:11px;">${t.assignees.join(', ') || '<span style="color:var(--amber)">Unassigned</span>'}</td>
+      <td style="font-size:11px;">${formatAssignees(t.assignees, {compact: true})}</td>
       <td class="${priClass}">${t.priority === 'none' ? '-' : t.priority}</td>
       <td>${statusBadge(t)}</td>
       <td style="font-size:12px;">${fmtDate(t.dueDate)}</td>
@@ -1728,6 +1812,35 @@ function renderTable(data, container) {
       }
     });
   });
+}
+
+// ══ RACE assignee formatting ═════════════════════════════════════════════════
+// First person in assignees array = Responsible (R)
+// Second person = Accountable (A)
+// Third onwards = Consulted (C)
+function formatAssignees(assignees, opts = {}) {
+  const compact = opts.compact || false;
+  if (!assignees || assignees.length === 0) {
+    return '<span style="color:var(--amber);font-weight:bold;">Unassigned</span>';
+  }
+  const parts = assignees.map((a, i) => {
+    let badge = '';
+    if (i === 0) badge = '<span class="role-badge role-r" title="Responsible">R</span>';
+    else if (i === 1) badge = '<span class="role-badge role-a" title="Accountable">A</span>';
+    else badge = '<span class="role-badge role-c" title="Consulted">C</span>';
+    return `${badge}${esc(a)}`;
+  });
+  if (compact && parts.length > 2) {
+    return parts.slice(0, 2).join(' ') + ` <span style="color:#999;font-size:10px;">+${parts.length - 2}</span>`;
+  }
+  return parts.join(' ');
+}
+
+function getResponsible(t) {
+  return (t.assignees && t.assignees[0]) || null;
+}
+function getAccountable(t) {
+  return (t.assignees && t.assignees[1]) || null;
 }
 
 function statusBadge(t) {
@@ -2191,7 +2304,14 @@ function openModal(taskId) {
   const listSelect = document.getElementById('modal-list');
   listSelect.innerHTML = LISTS.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
 
-  // Populate assignee checkboxes
+  // Populate Responsible / Accountable single-select dropdowns
+  const respSelect = document.getElementById('modal-responsible');
+  const accSelect = document.getElementById('modal-accountable');
+  const teamOptions = '<option value="">(none)</option>' + TEAM.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  respSelect.innerHTML = teamOptions;
+  accSelect.innerHTML = teamOptions;
+
+  // Populate Consulted multi-select checkboxes
   const optionsDiv = document.getElementById('modal-assignee-options');
   optionsDiv.innerHTML = TEAM.map(name =>
     `<label><input type="checkbox" value="${esc(name)}"> ${esc(name)}</label>`
@@ -2214,9 +2334,12 @@ function openModal(taskId) {
     document.getElementById('modal-content').value = task.content || '';
     document.getElementById('modal-comment').value = task.latestComment || '';
 
-    // Set assignee checkboxes
+    // Map assignees array → R / A / Consulted
+    respSelect.value = (task.assignees && task.assignees[0]) || '';
+    accSelect.value = (task.assignees && task.assignees[1]) || '';
+    const consulted = (task.assignees || []).slice(2);
     optionsDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-      cb.checked = task.assignees.includes(cb.value);
+      cb.checked = consulted.includes(cb.value);
     });
   } else {
     titleEl.textContent = 'Add Task';
@@ -2232,6 +2355,8 @@ function openModal(taskId) {
     document.getElementById('modal-start').value = '';
     document.getElementById('modal-content').value = '';
     document.getElementById('modal-comment').value = '';
+    respSelect.value = '';
+    accSelect.value = '';
     optionsDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
   }
 
@@ -2252,7 +2377,7 @@ function toggleMultiSelect(event) {
 
 function updateAssigneeDisplay() {
   const checked = Array.from(document.querySelectorAll('#modal-assignee-options input:checked')).map(cb => cb.value);
-  document.getElementById('modal-assignee-display').textContent = checked.length > 0 ? checked.join(', ') : 'Select assignees...';
+  document.getElementById('modal-assignee-display').textContent = checked.length > 0 ? checked.join(', ') : 'Select consulted contributors...';
 }
 
 // Close multi-select when clicking outside
@@ -2268,7 +2393,16 @@ function saveTask() {
   const name = document.getElementById('modal-name').value.trim();
   if (!name) { toast('Task name is required', 'error'); return; }
 
-  const assignees = Array.from(document.querySelectorAll('#modal-assignee-options input:checked')).map(cb => cb.value);
+  // Build ordered assignees array: [Responsible, Accountable, ...Consulted]
+  const responsible = document.getElementById('modal-responsible').value || '';
+  const accountable = document.getElementById('modal-accountable').value || '';
+  const consulted = Array.from(document.querySelectorAll('#modal-assignee-options input:checked')).map(cb => cb.value);
+  const assignees = [];
+  if (responsible) assignees.push(responsible);
+  if (accountable) assignees.push(accountable);
+  consulted.forEach(c => {
+    if (c !== responsible && c !== accountable) assignees.push(c);
+  });
   const dueVal = document.getElementById('modal-due').value;
   const startVal = document.getElementById('modal-start').value;
 
