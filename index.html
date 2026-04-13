@@ -2157,16 +2157,9 @@ function renderRevenueThermo() {
   const pct = Math.min(100, forecastDec28 / REVENUE_GOAL * 100);
   const multiplier = forecastDec28 > 0 ? REVENUE_GOAL / forecastDec28 : 0;
 
-  // Current TTM: use the most recent closed month we have data for
-  // (latest actual month in kpi_actuals, else latest "Actual" type in kpi_monthly_forecast)
-  const months = Object.keys(_forecastByMonth).sort();
-  let currentMonth = null;
-  for (const m of months) {
-    if (_actualsByMonth[m] || (_forecastByMonth[m] && _forecastByMonth[m].data_type === 'Actual')) {
-      currentMonth = m;
-    }
-  }
-  const currentTTM = currentMonth ? computeTTM(currentMonth) : 0;
+  // Current Forecast Dec 26: calendar 2026 total = actuals where available (Jan-Mar) + forecast (Apr-Dec).
+  // computeTTM('2026-12') already returns the 12-month window ending Dec 26 and lets actuals override forecast.
+  const forecastDec26 = computeTTM('2026-12');
 
   // SVG sizing
   const svgH = 180, svgW = 100;
@@ -2209,20 +2202,20 @@ function renderRevenueThermo() {
             <div class="rt-bar-value">${fmtMoney(REVENUE_GOAL)}</div>
           </div>
           <div class="rt-bar-row">
-            <div class="rt-bar-label">Forecast Dec 28</div>
-            <div class="rt-bar-track"><div class="rt-bar-fill forecast" style="width:${pct}%;"></div></div>
-            <div class="rt-bar-value">${fmtMoney(forecastDec28)}</div>
-          </div>
-          <div class="rt-bar-row">
             <div class="rt-bar-label">Gap to goal</div>
             <div class="rt-bar-track"><div class="rt-bar-fill gap" style="width:${Math.max(0, 100 - pct)}%;"></div></div>
             <div class="rt-bar-value">${fmtMoney(gap)}</div>
           </div>
-          ${currentTTM > 0 ? `
           <div class="rt-bar-row">
-            <div class="rt-bar-label">Current TTM</div>
-            <div class="rt-bar-track"><div class="rt-bar-fill" style="width:${currentTTM / REVENUE_GOAL * 100}%;background:var(--blue);"></div></div>
-            <div class="rt-bar-value">${fmtMoney(currentTTM)}</div>
+            <div class="rt-bar-label">Current Forecast Dec 28</div>
+            <div class="rt-bar-track"><div class="rt-bar-fill forecast" style="width:${pct}%;"></div></div>
+            <div class="rt-bar-value">${fmtMoney(forecastDec28)}</div>
+          </div>
+          ${forecastDec26 > 0 ? `
+          <div class="rt-bar-row">
+            <div class="rt-bar-label">Current Forecast Dec 26</div>
+            <div class="rt-bar-track"><div class="rt-bar-fill" style="width:${forecastDec26 / REVENUE_GOAL * 100}%;background:var(--blue);"></div></div>
+            <div class="rt-bar-value">${fmtMoney(forecastDec26)}</div>
           </div>` : ''}
         </div>
       </div>
