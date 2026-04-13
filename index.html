@@ -1660,17 +1660,18 @@ function renderDashboard(main) {
   });
   personEl.innerHTML = personHtml;
 
-  // Top overdue
+  // Overdue list
   const odEl = document.getElementById('dash-overdue');
   if (overdueList.length === 0) {
     odEl.innerHTML = '<div style="text-align:center;color:var(--green);padding:20px;font-weight:bold;">No overdue tasks</div>';
   } else {
-    let odHtml = '<table class="task-table"><thead><tr><th>Task</th><th>Assignee</th><th>Overdue</th></tr></thead><tbody>';
+    let odHtml = '<table class="task-table"><thead><tr><th>Task</th><th class="col-r">R</th><th class="col-a">A</th><th>Overdue</th></tr></thead><tbody>';
     overdueList.forEach(t => {
       const dd = Math.abs(daysDiff(t.dueDate));
       odHtml += `<tr onclick="openModal('${t.id}')">
         <td class="task-name-cell">${esc(t.name)}</td>
-        <td>${formatAssignees(t.assignees, {compact: true})}</td>
+        <td class="col-r">${nameCell(getResponsible(t), 'r')}</td>
+        <td class="col-a">${nameCell(getAccountable(t), 'a')}</td>
         <td class="overdue-text">${dd}d</td>
       </tr>`;
     });
