@@ -131,11 +131,12 @@ input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
   line-height: 1;
 }
 #app-header .rev-chip-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: var(--white);
   line-height: 1.2;
   margin-top: 2px;
+  white-space: nowrap;
 }
 #app-header .countdown {
   background: rgba(255,255,255,0.1);
@@ -1614,7 +1615,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-full-team-v11';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-rev-chip-v12';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1805,6 +1806,7 @@ async function initData() {
   // Backfill pillars on any task missing one (safety net for legacy data)
   backfillPillars();
   populatePersonFilter();
+  await loadRevenueData();
   updateRevenueChip();
   renderView();
 }
@@ -1935,36 +1937,76 @@ function renderView() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// REVENUE GOAL TRACKER
+// REVENUE GOAL TRACKER (run-rate model)
 // ══════════════════════════════════════════════════════════════════════════════
-const REVENUE_GOAL = 150_000_000;          // $150m by Dec 2028
-const GOAL_END_DATE = '2028-12-31';
-// YTD revenue: placeholder until the NetSuite KPI scraper writes real data to Supabase
-let _ytdRevenue = 50_000_000;
+// Target: trailing 12-month Net Revenue of $150m at end of Dec 2028.
+// Source: kpi_monthly_forecast in Supabase (seeded from ABH 3 year plan.xlsx, Row 26 "Total - Income")
+// plus kpi_actuals (to be populated monthly from NetSuite via scraper).
+const REVENUE_GOAL = 150_000_000;
+const GOAL_END_YEAR_MONTH = '2028-12';
 
-function dailyRevenueNeeded() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const end = new Date(GOAL_END_DATE);
-  const days = Math.max(1, Math.ceil((end - today) / 86400000));
-  const remaining = Math.max(0, REVENUE_GOAL - _ytdRevenue);
-  return { days, remaining, perDay: remaining / days };
+// Will be populated by loadRevenueData() on init.
+let _forecastByMonth = {};   // { '2026-01': { net_revenue, data_type }, ... }
+let _actualsByMonth = {};    // { '2026-01': { net_revenue }, ... }
+
+async function loadRevenueData() {
+  if (!sb) return;
+  try {
+    const { data: forecast } = await sb.from('kpi_monthly_forecast').select('year_month,net_revenue,data_type');
+    if (forecast) {
+      _forecastByMonth = {};
+      forecast.forEach(r => { _forecastByMonth[r.year_month] = r; });
+    }
+    const { data: actuals } = await sb.from('kpi_actuals').select('year_month,net_revenue');
+    if (actuals) {
+      _actualsByMonth = {};
+      actuals.forEach(r => { _actualsByMonth[r.year_month] = r; });
+    }
+  } catch (e) { console.warn('revenue data load failed', e); }
+}
+
+// Return forecast TTM (trailing 12 months) at a given end year_month, summed from the forecast table.
+// Actuals override forecast for months that exist in kpi_actuals.
+function computeTTM(endYearMonth) {
+  const [yStr, mStr] = endYearMonth.split('-');
+  const endY = parseInt(yStr, 10);
+  const endM = parseInt(mStr, 10);
+  let total = 0;
+  for (let i = 0; i < 12; i++) {
+    let m = endM - i;
+    let y = endY;
+    while (m <= 0) { m += 12; y -= 1; }
+    const key = `${y}-${String(m).padStart(2, '0')}`;
+    const actual = _actualsByMonth[key];
+    const forecast = _forecastByMonth[key];
+    const val = (actual && actual.net_revenue) || (forecast && forecast.net_revenue) || 0;
+    total += parseFloat(val) || 0;
+  }
+  return total;
 }
 
 function fmtMoney(n) {
-  if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(1) + 'm';
-  if (n >= 1_000) return '$' + Math.round(n / 1_000).toLocaleString() + 'k';
+  if (Math.abs(n) >= 1_000_000) return '$' + (n / 1_000_000).toFixed(1) + 'm';
+  if (Math.abs(n) >= 1_000) return '$' + Math.round(n / 1_000).toLocaleString() + 'k';
   return '$' + Math.round(n).toLocaleString();
-}
-function fmtMoneyExact(n) {
-  return '$' + Math.round(n).toLocaleString('en-AU');
 }
 
 function updateRevenueChip() {
   const el = document.getElementById('rev-chip');
   if (!el) return;
-  const r = dailyRevenueNeeded();
-  el.querySelector('.rev-chip-value').textContent = fmtMoneyExact(r.perDay);
-  el.title = `${fmtMoneyExact(r.remaining)} remaining to ${fmtMoney(REVENUE_GOAL)} goal over ${r.days} days. Based on YTD revenue of ${fmtMoneyExact(_ytdRevenue)}.`;
+  const forecastDec28 = computeTTM(GOAL_END_YEAR_MONTH);
+  const gap = REVENUE_GOAL - forecastDec28;
+  const pct = forecastDec28 / REVENUE_GOAL * 100;
+  const multiplier = forecastDec28 > 0 ? REVENUE_GOAL / forecastDec28 : 0;
+
+  el.querySelector('.rev-chip-label').textContent = 'Dec 2028 TTM';
+  el.querySelector('.rev-chip-value').textContent = fmtMoney(forecastDec28) + ' / ' + fmtMoney(REVENUE_GOAL);
+  el.title =
+    `Dec 2028 trailing 12-month forecast: ${fmtMoney(forecastDec28)}\n` +
+    `Target: ${fmtMoney(REVENUE_GOAL)}\n` +
+    `Gap: ${fmtMoney(gap)} short\n` +
+    `Progress: ${pct.toFixed(0)}%\n` +
+    `Multiplier needed: ${multiplier.toFixed(1)}x current forecast trajectory`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
