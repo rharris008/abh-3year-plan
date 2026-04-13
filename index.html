@@ -1008,8 +1008,8 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 <!-- ══ HEADER ═════════════════════════════════════════════════════════════ -->
 <header id="app-header">
   <div class="header-left">
-    <div class="logo"><img src="abh-logo.png" alt="ABH"></div>
-    <div class="title">3 Year Plan - $150m Turnover Goal</div>
+    <div class="logo" onclick="goHome()" title="Back to Dashboard" style="cursor:pointer;"><img src="abh-logo.png" alt="ABH"></div>
+    <div class="title" onclick="goHome()" title="Back to Dashboard" style="cursor:pointer;">3 Year Plan - $150m Turnover Goal</div>
   </div>
   <div class="right">
     <div class="rev-chip" id="rev-chip">
@@ -1033,7 +1033,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
   <!-- Sidebar -->
   <nav id="sidebar">
     <div class="section-label">Command</div>
-    <div class="nav-item active" data-view="dashboard">Dashboard</div>
+    <div class="nav-item active" data-view="dashboard" onclick="goHome()">&#127968; Home / Dashboard</div>
     <div class="nav-item" data-view="overdue">Overdue</div>
     <div class="nav-item" data-view="mytasks">My Tasks</div>
 
@@ -1810,6 +1810,22 @@ function populatePersonFilter() {
 
 function setPersonFilter(name) {
   _personFilter = name || '';
+  renderView();
+}
+
+// Home button — routes back to the dashboard from anywhere, clears prefilters
+// so the user lands on a clean dashboard view. Wired to the logo, title, and
+// Home nav item.
+function goHome() {
+  currentView = 'dashboard';
+  _pillarPrefilter = null;
+  _statusPrefilter = null;
+  _priorityPrefilter = null;
+  _assigneePrefilter = null;
+  _notCompleteOnly = false;
+  document.querySelectorAll('#sidebar .nav-item').forEach(i => i.classList.remove('active'));
+  const item = document.querySelector('#sidebar .nav-item[data-view="dashboard"]');
+  if (item) item.classList.add('active');
   renderView();
 }
 
