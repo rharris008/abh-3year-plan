@@ -148,7 +148,10 @@ input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
   border-radius: 4px;
   font-size: 11px;
   font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
+#save-indicator:hover { opacity: 0.85; }
 #save-indicator.clean { background: var(--green); color: #fff; }
 #save-indicator.dirty { background: var(--amber); color: #fff; }
 #save-indicator.saving { background: var(--blue); color: #fff; }
@@ -927,7 +930,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
       <button class="btn btn-sm btn-outline" onclick="addPersonPrompt()" title="Add a person to the team" style="padding:3px 8px;font-size:11px;">+</button>
     </div>
     <div class="countdown" id="countdown"></div>
-    <div id="save-indicator" class="clean">SAVED</div>
+    <div id="save-indicator" class="clean" onclick="saveAll()" title="Click to save">SAVED</div>
     <button class="btn btn-sm btn-primary" onclick="saveAll()">Save</button>
   </div>
 </header>
