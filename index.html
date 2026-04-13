@@ -1240,10 +1240,27 @@ function loadTeamFromLocal() {
     if (Array.isArray(parsed) && parsed.length > 0) TEAM = parsed;
   } catch (e) { console.warn('team load failed', e); }
 }
+async function loadTeamFromSupabase() {
+  if (!sb) return false;
+  try {
+    const { data, error } = await sb
+      .from('abh_directory')
+      .select('full_name')
+      .eq('active', true)
+      .order('full_name');
+    if (error) { console.warn('team cloud load failed', error); return false; }
+    if (Array.isArray(data) && data.length > 0) {
+      TEAM = data.map(r => r.full_name).filter(Boolean);
+      saveTeamToLocal();
+      return true;
+    }
+  } catch (e) { console.warn('team cloud load threw', e); }
+  return false;
+}
 function saveTeamToLocal() {
   localStorage.setItem('abh3y_team', JSON.stringify(TEAM));
 }
-function addPersonPrompt() {
+async function addPersonPrompt() {
   const name = prompt('Add a person to the team.\nEnter their full name (e.g. "Aaron Mattin"):');
   if (!name) return;
   const clean = name.trim();
@@ -1252,11 +1269,31 @@ function addPersonPrompt() {
     toast(`${clean} is already on the team`, 'info');
     return;
   }
+  const parts = clean.split(/\s+/);
+  const first = parts[0] || clean;
+  const last = parts.slice(1).join(' ') || null;
+  if (sb) {
+    const { error } = await sb.from('abh_directory').upsert({
+      full_name: clean,
+      first_name: first,
+      last_name: last,
+      tier: 'red',
+      companies: [],
+      active: true,
+    }, { onConflict: 'full_name' });
+    if (error) {
+      console.warn('add person cloud failed', error);
+      toast(`Added ${clean} locally (cloud failed)`, 'info');
+    } else {
+      toast(`Added ${clean} to the directory`);
+    }
+  } else {
+    toast(`Added ${clean} locally (offline)`, 'info');
+  }
   TEAM.push(clean);
   TEAM.sort();
   saveTeamToLocal();
   populatePersonFilter();
-  toast(`Added ${clean} to the team`);
 }
 
 const SPACES = [
@@ -1707,7 +1744,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-thermo-v13';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-delete-sync-v15';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1825,11 +1862,22 @@ function dbRowToTask(r) {
 async function saveToSupabase() {
   if (!sb) return false;
   try {
-    const { error } = await sb.from(SB_TABLE).upsert(
+    // Upsert current local state
+    const { error: upErr } = await sb.from(SB_TABLE).upsert(
       tasks.map(taskToDbRow),
       { onConflict: 'id' }
     );
-    if (error) { console.error('Supabase save error:', error); return false; }
+    if (upErr) { console.error('Supabase upsert error:', upErr); return false; }
+    // Diff-delete: remove any cloud row whose id is no longer in local tasks
+    const { data: cloudRows, error: selErr } = await sb.from(SB_TABLE).select('id');
+    if (selErr) { console.warn('Supabase select-for-diff error:', selErr); return true; }
+    const localIds = new Set(tasks.map(t => t.id));
+    const staleIds = (cloudRows || []).map(r => r.id).filter(id => !localIds.has(id));
+    if (staleIds.length > 0) {
+      const { error: delErr } = await sb.from(SB_TABLE).delete().in('id', staleIds);
+      if (delErr) { console.error('Supabase delete error:', delErr); return false; }
+      console.log(`[sync] removed ${staleIds.length} stale rows from cloud`);
+    }
     return true;
   } catch(e) { console.error('Supabase save exception:', e); return false; }
 }
@@ -1875,6 +1923,7 @@ async function saveAll() {
 
 async function initData() {
   loadTeamFromLocal();
+  await loadTeamFromSupabase();
   loadTeamsFromLocal();
   applyTeamLabelsToSidebar();
   // Try Supabase first, then localStorage, then seed data
