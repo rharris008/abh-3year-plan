@@ -971,6 +971,46 @@ const LISTS = [
   'Q2 Strategic Priorities - Start to scale for growth'
 ];
 
+// ══ TEAM MEMBERSHIPS (who can see each team view) ════════════════════════════
+// Edit these arrays to control which people see each team's tasks.
+// When 'Viewing as' is set to a non-member (or no one), the team view shows blank.
+const TEAM_MEMBERS = {
+  gsd:      ['Robert Harris', 'Richard Carlick'],
+  monthend: ['Lisa Fontanot', 'Sharon Salt', 'Robert Harris'],
+  finance:  ['Lisa Fontanot', 'Sharon Salt', 'Robert Harris'],
+};
+const TEAM_LABELS = {
+  gsd:      'Getting Shit Done',
+  monthend: 'Month End Reminders',
+  finance:  'Finance Tasks',
+};
+
+function teamHasAccess(teamKey) {
+  // Returns true if the current "Viewing as" person is in the team.
+  // No one selected → false (blank state until you pick a member).
+  if (!_personFilter) return false;
+  const members = TEAM_MEMBERS[teamKey] || [];
+  const target = _personFilter.toLowerCase();
+  return members.some(m => m.toLowerCase() === target);
+}
+
+function renderTeamBlocked(main, teamKey) {
+  const label = TEAM_LABELS[teamKey] || teamKey;
+  const members = TEAM_MEMBERS[teamKey] || [];
+  main.innerHTML = `
+    <div class="view-header">
+      <div class="view-title">${esc(label)}</div>
+    </div>
+    <div style="background:var(--white);border-radius:8px;padding:40px 24px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+      <div style="font-size:14px;color:#666;margin-bottom:14px;">This team's tasks are restricted.</div>
+      <div style="font-size:12px;color:#999;margin-bottom:18px;">Set <b>Viewing as</b> in the header to one of the team members:</div>
+      <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+        ${members.map(m => `<span style="display:inline-block;padding:4px 12px;background:var(--ltgrey);border-radius:14px;font-size:12px;font-weight:bold;color:var(--navy);">${esc(m)}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
 // ══ STRATEGIC PILLARS (the 7 ABH operational pillars) ════════════════════════
 const PILLARS = [
   'Revenue and Growth',
@@ -1358,9 +1398,18 @@ function renderView() {
       case 'strategic': renderStrategic(main); break;
       case 'person': renderPersonView(main); break;
       case 'workload': renderWorkload(main); break;
-      case 'gsd': renderFilteredList(main, 'Getting Shit Done', t => t.space === 'Getting Shit done'); break;
-      case 'monthend': renderFilteredList(main, 'Month End Reminders', t => t.space === 'Month end reminders'); break;
-      case 'finance': renderFilteredList(main, 'Finance Tasks', t => t.space === 'Finance Task reallocations' || t.space === 'Finance Team ongoing efficiency'); break;
+      case 'gsd':
+        if (!teamHasAccess('gsd')) { renderTeamBlocked(main, 'gsd'); break; }
+        renderFilteredList(main, 'Getting Shit Done', t => t.space === 'Getting Shit done');
+        break;
+      case 'monthend':
+        if (!teamHasAccess('monthend')) { renderTeamBlocked(main, 'monthend'); break; }
+        renderFilteredList(main, 'Month End Reminders', t => t.space === 'Month end reminders');
+        break;
+      case 'finance':
+        if (!teamHasAccess('finance')) { renderTeamBlocked(main, 'finance'); break; }
+        renderFilteredList(main, 'Finance Tasks', t => t.space === 'Finance Task reallocations' || t.space === 'Finance Team ongoing efficiency');
+        break;
       case 'tasklist': renderTaskList(main); break;
       case 'timeline': renderTimeline(main); break;
       case 'config': renderConfig(main); break;
