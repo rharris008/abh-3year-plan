@@ -724,6 +724,27 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 }
 .role-legend .role-badge { font-size: 9px; }
 
+/* Compact name chips for R / A columns in task tables */
+.name-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: var(--white);
+}
+.name-chip.name-r { background: var(--blue); }
+.name-chip.name-a { background: var(--navy); }
+.task-table th.col-r,
+.task-table td.col-r,
+.task-table th.col-a,
+.task-table td.col-a {
+  width: 100px;
+  max-width: 100px;
+  text-align: left;
+}
+
 /* ══ PILLAR CARDS ════════════════════════════════════════════════════════════ */
 .pillar-grid {
   display: grid;
@@ -1745,8 +1766,15 @@ function applyFilters() {
 
   if (sortCol) {
     filtered.sort((a,b) => {
-      let va = a[sortCol] || '';
-      let vb = b[sortCol] || '';
+      let va, vb;
+      if (sortCol === 'responsible') {
+        va = getResponsible(a) || ''; vb = getResponsible(b) || '';
+      } else if (sortCol === 'accountable') {
+        va = getAccountable(a) || ''; vb = getAccountable(b) || '';
+      } else {
+        va = a[sortCol] || '';
+        vb = b[sortCol] || '';
+      }
       if (sortCol === 'dueDate') {
         va = va || '9999-99-99'; vb = vb || '9999-99-99';
       }
@@ -1770,7 +1798,8 @@ function renderTable(data, container) {
   const arrow = (col) => sortCol === col ? (sortAsc ? ' ▲' : ' ▼') : '';
   let html = `<table class="task-table"><thead><tr>
     <th onclick="sortTable('name')">Task Name${arrow('name')}</th>
-    <th onclick="sortTable('assignees')">Assignee${arrow('assignees')}</th>
+    <th class="col-r" onclick="sortTable('responsible')">R${arrow('responsible')}</th>
+    <th class="col-a" onclick="sortTable('accountable')">A${arrow('accountable')}</th>
     <th onclick="sortTable('priority')">Priority${arrow('priority')}</th>
     <th>Status</th>
     <th onclick="sortTable('dueDate')">Due Date${arrow('dueDate')}</th>
@@ -1779,14 +1808,15 @@ function renderTable(data, container) {
   </tr></thead><tbody>`;
 
   if (data.length === 0) {
-    html += '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999;">No tasks match filters</td></tr>';
+    html += '<tr><td colspan="8" style="text-align:center;padding:20px;color:#999;">No tasks match filters</td></tr>';
   }
 
   data.forEach(t => {
     const priClass = `priority-${t.priority.toLowerCase()}`;
     html += `<tr onclick="openModal('${t.id}')">
       <td class="task-name-cell" title="${esc(t.name)}">${esc(t.name)}</td>
-      <td style="font-size:11px;">${formatAssignees(t.assignees, {compact: true})}</td>
+      <td class="col-r">${nameCell(getResponsible(t), 'r')}</td>
+      <td class="col-a">${nameCell(getAccountable(t), 'a')}</td>
       <td class="${priClass}">${t.priority === 'none' ? '-' : t.priority}</td>
       <td>${statusBadge(t)}</td>
       <td style="font-size:12px;">${fmtDate(t.dueDate)}</td>
@@ -1841,6 +1871,24 @@ function getResponsible(t) {
 }
 function getAccountable(t) {
   return (t.assignees && t.assignees[1]) || null;
+}
+
+// Shortest unambiguous display name. First name only, unless two TEAM members share a first name.
+function shortName(fullName) {
+  if (!fullName) return '';
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 0) return '';
+  const first = parts[0];
+  const dup = TEAM.filter(t => (t.split(/\s+/)[0] || '').toLowerCase() === first.toLowerCase()).length > 1;
+  if (dup && parts.length > 1) {
+    return first + ' ' + parts[parts.length - 1][0].toUpperCase();
+  }
+  return first;
+}
+
+function nameCell(fullName, role) {
+  if (!fullName) return '<span style="color:#bbb;">-</span>';
+  return `<span title="${esc(fullName)}" class="name-chip name-${role}">${esc(shortName(fullName))}</span>`;
 }
 
 function statusBadge(t) {
