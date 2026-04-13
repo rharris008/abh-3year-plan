@@ -825,6 +825,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
     <div class="title">3 Year Plan - $150m Turnover Goal</div>
   </div>
   <div class="right">
+    <button class="btn btn-sm btn-success" onclick="openModal(null)">+ Add Task</button>
     <div class="person-selector">
       <label for="person-filter">Viewing as</label>
       <select id="person-filter" onchange="setPersonFilter(this.value)"></select>
@@ -1109,6 +1110,37 @@ const PILLAR_COLOURS = {
   'Safety Culture':           '#C0392B'
 };
 
+// JS-side keyword classifier — safety net for any task missing a pillar.
+function classifyPillar(t) {
+  const haystack = [
+    t.name || '', t.content || '', t.list || '', t.folder || '', t.space || ''
+  ].join(' ').toLowerCase();
+  const has = (kws) => kws.some(k => haystack.includes(k));
+  if (has(['safety', 'ppe', 'incident', 'near miss', 'hazard'])) return 'Safety Culture';
+  if (has(['queensland', 'victoria', ' wa ', 'qld facility', 'new state', 'multi-site', 'second site', 'interstate'])) return 'Geographical Expansion';
+  if (has(['supplier', 'vendor', 'difot', 'ncr', 'warehouse', 'wms', 'freight', 'loscam', 'raw material', 'purchase order', ' po ', 'edi', 'trading terms', 'billing', 'damaged stock', 'insurance claim', 'sscc'])) return 'Supply Chain';
+  if (has(['recruit', 'hire', 'induction', 'onboard', 'training', 'advertise for', 'interview', 'candidate', 'workforce ready', 'adp', 'payroll', 'sop'])) return 'Investing in Our Staff';
+  if (has(['culture', 'values', 'leadership', 'company values'])) return 'Culture and Leadership';
+  if (has(['hmps','scholles','scholle','recopak','filler','line a','line b','ep new line','st marys','anne street','ann street','erskine park','transition','commission','test run','production','efficiency','bom','cip','lockout','lock out','rigger','crane','disconnect','reconnect','pipework','electrical','compressed air','water flow','ro2','drip tray','spillage','shed move','bottle line','canning line','shift','operator','maintenance','wrapper','palletiser','conveyor','assembly','wall','washroom','cad','cdc','building','signage','bailer','bank rec','petty cash','corporate card','depreciation','journal','month end','code & post','code and post','cash allocation','remittance','fuel card','reconciliation','accrual','deduction'])) return 'Operational Excellence';
+  if (has(['revenue','$150m','$100m','$50m','growth','non-bottle','12 month rolling','direct to customer','d2c','customer coverage','market share','sales target','raise weekly invoices','promotional','cds','merch','oatly','contract','claims','ar collections','customer follow-up'])) return 'Revenue and Growth';
+  if ((t.folder || '').toLowerCase() === '3-year target') return 'Revenue and Growth';
+  return null;
+}
+
+function backfillPillars() {
+  let filled = 0;
+  tasks.forEach(t => {
+    if (!t.pillar) {
+      const p = classifyPillar(t);
+      if (p) { t.pillar = p; filled++; }
+    }
+  });
+  if (filled > 0) {
+    console.log(`[pillars] backfilled ${filled} tasks via JS classifier`);
+    saveToLocal();
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // EMBEDDED TASK DATA: ALL 77 TASKS FROM CLICKUP CSV
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1302,7 +1334,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-race';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-pillars-v2';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1423,6 +1455,8 @@ async function initData() {
   }
   // Always normalise assignee casing to match TEAM (handles legacy ROBERT HARRIS / ravin singh / kate)
   tasks.forEach(normaliseTaskAssignees);
+  // Backfill pillars on any task missing one (safety net for legacy data)
+  backfillPillars();
   populatePersonFilter();
   renderView();
 }
