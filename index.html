@@ -929,12 +929,14 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 <div id="app-body">
   <!-- Sidebar -->
   <nav id="sidebar">
-    <div class="section-label">Strategic</div>
-    <div class="nav-item active" data-view="strategic">3-Year Outcomes</div>
-    <div class="nav-item" data-view="pillars">Pillars</div>
-    <div class="nav-item" data-view="dashboard">Dashboard</div>
+    <div class="section-label">Command</div>
+    <div class="nav-item active" data-view="dashboard">Dashboard</div>
     <div class="nav-item" data-view="overdue">Overdue</div>
     <div class="nav-item" data-view="mytasks">My Tasks</div>
+
+    <div class="section-label">Strategic</div>
+    <div class="nav-item" data-view="strategic">3-Year Outcomes</div>
+    <div class="nav-item" data-view="pillars">Pillars</div>
 
     <div class="section-label">By Year</div>
     <div class="nav-group" id="grp-2026">
@@ -1376,7 +1378,7 @@ const SEED_TASKS = [
 // ══════════════════════════════════════════════════════════════════════════════
 let tasks = [];
 let dirty = false;
-let currentView = 'strategic';
+let currentView = 'dashboard';
 let sortCol = null;
 let sortAsc = true;
 
@@ -1482,7 +1484,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-quarter-rev-v3';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-default-dash-v4';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
