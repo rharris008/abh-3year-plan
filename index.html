@@ -27,6 +27,7 @@
 
 /* ══ RESET & BASE ════════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
 body {
   font-family: Arial, sans-serif;
   font-size: 14px;
@@ -34,7 +35,8 @@ body {
   background: var(--ltgrey);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 button { font-family: Arial, sans-serif; cursor: pointer; }
 input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
@@ -1584,10 +1586,9 @@ function renderDashboard(main) {
   });
   const personSorted = Object.entries(byPerson).sort((a,b) => b[1].total - a[1].total);
 
-  // Top 5 overdue
+  // All overdue, most overdue first
   const overdueList = tasks.filter(t => isOverdue(t))
-    .sort((a,b) => daysDiff(a.dueDate) - daysDiff(b.dueDate))
-    .slice(0, 5);
+    .sort((a,b) => daysDiff(a.dueDate) - daysDiff(b.dueDate));
 
   main.innerHTML = `
     <div class="view-header">
@@ -1616,7 +1617,7 @@ function renderDashboard(main) {
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:4px;">
       <div class="card">
-        <div class="card-header" style="background:var(--red);">Top 5 Most Overdue</div>
+        <div class="card-header" style="background:var(--red);">Overdue (${overdueList.length})</div>
         <div class="card-body" id="dash-overdue"></div>
       </div>
       <div class="card">
