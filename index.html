@@ -840,14 +840,14 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 <div id="app-body">
   <!-- Sidebar -->
   <nav id="sidebar">
-    <div class="section-label">Command</div>
-    <div class="nav-item active" data-view="dashboard">Dashboard</div>
+    <div class="section-label">Strategic</div>
+    <div class="nav-item active" data-view="strategic">3-Year Outcomes</div>
+    <div class="nav-item" data-view="pillars">Pillars</div>
+    <div class="nav-item" data-view="dashboard">Dashboard</div>
     <div class="nav-item" data-view="overdue">Overdue</div>
     <div class="nav-item" data-view="mytasks">My Tasks</div>
 
-    <div class="section-label">Strategic</div>
-    <div class="nav-item" data-view="pillars">Pillars</div>
-    <div class="nav-item" data-view="strategic">3-Year Outcomes</div>
+    <div class="section-label">By Year</div>
     <div class="nav-group" id="grp-2026">
       <div class="nav-toggle" onclick="toggleNavGroup('grp-2026')"><span>2026</span><span class="chevron">&#9654;</span></div>
       <div class="nav-sub">
@@ -1028,19 +1028,78 @@ const LISTS = [
   'Q2 Strategic Priorities - Start to scale for growth'
 ];
 
-// ══ TEAM MEMBERSHIPS (who can see each team view) ════════════════════════════
-// Defaults — overridden by localStorage 'abh3y_teams' if present.
-// Editable via Config -> Teams.
-let TEAM_MEMBERS = {
-  gsd:      ['Robert Harris', 'Richard Carlick'],
-  monthend: ['Lisa Fontanot', 'Sharon Salt', 'Robert Harris'],
-  finance:  ['Lisa Fontanot', 'Sharon Salt', 'Robert Harris'],
+// ══ TEAMS (full structure: spaces, members, label) ═══════════════════════════
+// 'all' members = everyone can see the team's tasks (no restriction)
+// 'creator' members = only the task creator sees (personal reminders)
+// Array of names = explicit member list
+let TEAMS = {
+  strategic: {
+    label: '3-Year Outcomes',
+    members: 'all',
+    spaces: ['ABH 3 Year $150m turnover goal'],
+  },
+  finance: {
+    label: 'Finance',
+    members: ['Lisa Fontanot', 'Sharon Salt', 'Robert Harris'],
+    spaces: ['Finance Task reallocations', 'Finance Team ongoing efficiency', 'Month end reminders'],
+  },
+  gsd: {
+    label: 'Getting Shit Done',
+    members: ['Robert Harris', 'Richard Carlick'],
+    spaces: ['Getting Shit done'],
+  },
+  richardm: {
+    label: "Richard Magin's Tasks",
+    members: ['Richard Magin', 'Robert Harris'],
+    spaces: ["Richard Magin's Tasks"],
+  },
+  personal: {
+    label: 'Personal',
+    members: 'creator',
+    spaces: ['My tasks'],
+  },
 };
-let TEAM_LABELS = {
-  gsd:      'Getting Shit Done',
-  monthend: 'Month End Reminders',
-  finance:  'Finance Tasks',
-};
+
+// Backwards compat shims for older code paths still referencing the old constants
+let TEAM_MEMBERS = {};
+let TEAM_LABELS = {};
+function rebuildTeamCompatShims() {
+  TEAM_MEMBERS = {};
+  TEAM_LABELS = {};
+  Object.entries(TEAMS).forEach(([key, t]) => {
+    TEAM_MEMBERS[key] = Array.isArray(t.members) ? t.members : [];
+    TEAM_LABELS[key] = t.label;
+  });
+}
+rebuildTeamCompatShims();
+
+function getTeamKeyForTask(t) {
+  if (!t || !t.space) return null;
+  for (const [key, team] of Object.entries(TEAMS)) {
+    if ((team.spaces || []).includes(t.space)) return key;
+  }
+  return null;
+}
+
+function canViewTask(t, viewerName) {
+  const key = getTeamKeyForTask(t);
+  if (!key) return true;  // unclassified tasks are visible (safe default)
+  const team = TEAMS[key];
+  if (!team) return true;
+  if (team.members === 'all') return true;
+  if (team.members === 'creator') {
+    if (!viewerName) return false;
+    return (t.createdBy || '').toLowerCase() === viewerName.toLowerCase();
+  }
+  if (!viewerName) return false;  // no Viewing-as set: restricted team tasks hidden
+  return team.members.some(m => m.toLowerCase() === viewerName.toLowerCase());
+}
+
+// Returns the global tasks list filtered to what the current viewer can see.
+// Use this everywhere a render function reads `tasks` for display.
+function visibleTasks() {
+  return tasks.filter(t => canViewTask(t, _personFilter));
+}
 
 function loadTeamsFromLocal() {
   try {
@@ -1228,7 +1287,7 @@ const SEED_TASKS = [
 // ══════════════════════════════════════════════════════════════════════════════
 let tasks = [];
 let dirty = false;
-let currentView = 'dashboard';
+let currentView = 'strategic';
 let sortCol = null;
 let sortAsc = true;
 
@@ -1485,11 +1544,13 @@ function setPersonFilter(name) {
 }
 
 function applyPersonFilter() {
-  // Mutates the global `tasks` reference so render functions see only the filtered list.
-  // Original list is stashed in _allTasksRef.ref and restored after render.
-  if (!_personFilter) return;
+  // Filters `tasks` to what the current "Viewing as" viewer is allowed to see.
+  // 'Viewing as' is the simulated logged-in user — visibility is team-based.
+  // Strategic tasks are visible to everyone. Restricted teams require membership.
+  // Personal tasks are visible only to the creator.
+  // When 'Viewing as' is empty, only strategic tasks are visible.
   _allTasksRef.ref = tasks;
-  tasks = tasks.filter(t => hasAssignee(t, _personFilter));
+  tasks = tasks.filter(t => canViewTask(t, _personFilter));
 }
 
 // Case-insensitive assignee match helper (use this everywhere instead of .includes)
@@ -1545,8 +1606,8 @@ function renderQuarter(main, year, quarter) {
 
 function renderView() {
   const main = document.getElementById('main');
-  // By Person view always shows everyone; config doesn't read tasks. Both skip the filter.
-  const skipFilter = (currentView === 'person' || currentView === 'config');
+  // Config view doesn't read tasks. Everything else applies the visibility filter.
+  const skipFilter = (currentView === 'config');
   if (!skipFilter) applyPersonFilter();
   try {
     // Year-quarter views (e.g. "2026-q1")
