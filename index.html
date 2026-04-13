@@ -2299,18 +2299,30 @@ function renderDashboard(main) {
     if (t.status === 'complete') byPillar[p].complete++;
   });
 
-  // By person — filter out nulls/empty, canonical casing via normaliseAssignee
+  // By person — window = 3 months back to 3 months forward. Only outstanding (not complete)
+  // tasks whose due date falls in that window count. Tasks with no due date are excluded
+  // from the person card because they're unactionable without a date.
+  const _now = new Date();
+  const _winStart = new Date(_now.getFullYear(), _now.getMonth() - 3, 1);
+  const _winEnd = new Date(_now.getFullYear(), _now.getMonth() + 3, _now.getDate());
   const byPerson = {};
   tasks.forEach(t => {
+    if (t.status === 'complete') return;
+    if (!t.dueDate) return;
+    const d = new Date(t.dueDate);
+    if (isNaN(d) || d < _winStart || d > _winEnd) return;
+    const overdue = d < _now;
     const raw = (t.assignees || []).map(a => normaliseAssignee(a)).filter(a => a && a.trim());
     const people = raw.length > 0 ? raw : ['Unassigned'];
     people.forEach(p => {
-      if (!byPerson[p]) byPerson[p] = { total: 0, overdue: 0 };
-      byPerson[p].total++;
-      if (isOverdue(t)) byPerson[p].overdue++;
+      if (!byPerson[p]) byPerson[p] = { overdue: 0, upcoming: 0 };
+      if (overdue) byPerson[p].overdue++;
+      else byPerson[p].upcoming++;
     });
   });
-  const personSorted = Object.entries(byPerson).sort((a,b) => b[1].total - a[1].total);
+  const personSorted = Object.entries(byPerson)
+    .map(([name, d]) => [name, { ...d, total: d.overdue + d.upcoming }])
+    .sort((a,b) => (b[1].overdue - a[1].overdue) || (b[1].total - a[1].total));
 
   // All overdue, most overdue first
   const overdueList = tasks.filter(t => isOverdue(t))
@@ -2338,7 +2350,11 @@ function renderDashboard(main) {
         <div class="card-body" id="dash-by-pillar"></div>
       </div>
       <div class="card">
-        <div class="card-header">Outstanding by Person</div>
+        <div class="card-header">Outstanding by Person <span style="font-weight:normal;font-size:10px;opacity:0.8;">(last quarter + next 3 months)</span></div>
+        <div style="padding:6px 12px 2px;font-size:10px;color:#666;display:flex;gap:12px;align-items:center;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Overdue</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--navy);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Due in next 3 months</span>
+        </div>
         <div class="card-body" id="dash-by-person"></div>
       </div>
     </div>
@@ -2375,21 +2391,34 @@ function renderDashboard(main) {
   });
   listEl.innerHTML = listHtml;
 
-  // By person
+  // By person — stacked bar, width proportional to largest total in the window.
   const personEl = document.getElementById('dash-by-person');
-  let personHtml = '';
-  personSorted.forEach(([name, data]) => {
-    const barW = Math.min(100, data.total * 4);
-    personHtml += `
-      <div class="progress-row" onclick="drillFromKpi('person::${esc(name).replace(/'/g, '&apos;')}')" style="cursor:pointer;" title="Click to see ${esc(name)}'s outstanding tasks">
-        <div class="progress-label">${esc(name)}</div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width:${barW}%;background:${data.overdue > 0 ? 'var(--red)' : 'var(--navy)'};"></div>
-          <div class="progress-bar-text">${data.total} (${data.overdue} overdue)</div>
-        </div>
-      </div>`;
-  });
-  personEl.innerHTML = personHtml;
+  if (personSorted.length === 0) {
+    personEl.innerHTML = '<div style="text-align:center;color:#666;padding:16px;font-size:11px;">No outstanding tasks in the window.</div>';
+  } else {
+    const maxTotal = Math.max(...personSorted.map(([, d]) => d.total), 1);
+    let personHtml = '';
+    personSorted.forEach(([name, data]) => {
+      const totalW = Math.max(6, (data.total / maxTotal) * 100);
+      const overduePortion = data.total > 0 ? (data.overdue / data.total) * totalW : 0;
+      const upcomingPortion = totalW - overduePortion;
+      const labelBits = [];
+      if (data.overdue > 0) labelBits.push(`${data.overdue} overdue`);
+      if (data.upcoming > 0) labelBits.push(`${data.upcoming} upcoming`);
+      personHtml += `
+        <div class="progress-row" onclick="drillFromKpi('person::${esc(name).replace(/'/g, '&apos;')}')" style="cursor:pointer;" title="Click to see ${esc(name)}'s outstanding tasks in window">
+          <div class="progress-label">${esc(name)}</div>
+          <div class="progress-bar-bg">
+            <div style="display:flex;height:100%;width:${totalW}%;">
+              ${data.overdue > 0 ? `<div style="width:${(overduePortion/totalW)*100}%;background:var(--red);"></div>` : ''}
+              ${data.upcoming > 0 ? `<div style="width:${(upcomingPortion/totalW)*100}%;background:var(--navy);"></div>` : ''}
+            </div>
+            <div class="progress-bar-text">${labelBits.join(' + ')}</div>
+          </div>
+        </div>`;
+    });
+    personEl.innerHTML = personHtml;
+  }
 
   // Overdue list
   const odEl = document.getElementById('dash-overdue');
