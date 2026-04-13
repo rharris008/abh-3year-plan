@@ -2576,46 +2576,48 @@ function applyFilters() {
     return true;
   });
 
-  if (sortCol) {
-    filtered.sort((a,b) => {
-      let va, vb;
-      if (sortCol === 'responsible') {
-        va = getResponsible(a) || ''; vb = getResponsible(b) || '';
-      } else if (sortCol === 'accountable') {
-        va = getAccountable(a) || ''; vb = getAccountable(b) || '';
-      } else {
-        va = a[sortCol] || '';
-        vb = b[sortCol] || '';
-      }
-      if (sortCol === 'dueDate') {
-        va = va || '9999-99-99'; vb = vb || '9999-99-99';
-      }
-      if (sortCol === 'priority') {
-        const priOrd = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3, none: 4 };
-        va = priOrd[va] ?? 5; vb = priOrd[vb] ?? 5;
-        return sortAsc ? va - vb : vb - va;
-      }
-      if (typeof va === 'string') va = va.toLowerCase();
-      if (typeof vb === 'string') vb = vb.toLowerCase();
-      if (va < vb) return sortAsc ? -1 : 1;
-      if (va > vb) return sortAsc ? 1 : -1;
-      return 0;
-    });
-  }
-
   renderTable(filtered, document.getElementById('task-table-container'));
 }
 
+function sortTasksInPlace(list) {
+  if (!sortCol) return list;
+  return list.slice().sort((a,b) => {
+    let va, vb;
+    if (sortCol === 'responsible') {
+      va = getResponsible(a) || ''; vb = getResponsible(b) || '';
+    } else if (sortCol === 'accountable') {
+      va = getAccountable(a) || ''; vb = getAccountable(b) || '';
+    } else {
+      va = a[sortCol] || '';
+      vb = b[sortCol] || '';
+    }
+    if (sortCol === 'dueDate') {
+      va = va || '9999-99-99'; vb = vb || '9999-99-99';
+    }
+    if (sortCol === 'priority') {
+      const priOrd = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3, none: 4 };
+      va = priOrd[va] ?? 5; vb = priOrd[vb] ?? 5;
+      return sortAsc ? va - vb : vb - va;
+    }
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    if (va < vb) return sortAsc ? -1 : 1;
+    if (va > vb) return sortAsc ? 1 : -1;
+    return 0;
+  });
+}
+
 function renderTable(data, container) {
+  data = sortTasksInPlace(data);
   const arrow = (col) => sortCol === col ? (sortAsc ? ' ▲' : ' ▼') : '';
   let html = `<table class="task-table"><thead><tr>
     <th onclick="sortTable('name')">Task Name${arrow('name')}</th>
     <th class="col-r" onclick="sortTable('responsible')">R${arrow('responsible')}</th>
     <th class="col-a" onclick="sortTable('accountable')">A${arrow('accountable')}</th>
     <th onclick="sortTable('priority')">Priority${arrow('priority')}</th>
-    <th>Status</th>
+    <th onclick="sortTable('status')">Status${arrow('status')}</th>
     <th onclick="sortTable('dueDate')">Due Date${arrow('dueDate')}</th>
-    <th>Days</th>
+    <th onclick="sortTable('dueDate')">Days${arrow('dueDate')}</th>
     <th onclick="sortTable('pillar')">Pillar${arrow('pillar')}</th>
   </tr></thead><tbody>`;
 
@@ -2731,7 +2733,13 @@ function sortTable(col) {
     sortCol = col;
     sortAsc = true;
   }
-  applyFilters();
+  // Re-render whichever view currently owns the table. applyFilters() only handles
+  // the All Tasks view; other views (Overdue, Filtered lists) need renderView.
+  if (document.getElementById('task-table-container')) {
+    applyFilters();
+  } else {
+    renderView();
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
