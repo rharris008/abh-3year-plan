@@ -2508,6 +2508,7 @@ function renderTaskList(main) {
       <select id="f-assignee" onchange="applyFilters()"><option value="">All Assignees</option></select>
       <input type="text" id="f-search" placeholder="Search tasks..." oninput="applyFilters()">
     </div>
+    <div id="f-scope-note" style="padding:6px 12px;font-size:11px;color:#666;background:#f5f5f5;border-left:3px solid var(--blue);margin-bottom:8px;display:none;"></div>
     <div id="task-table-container"></div>
   `;
 
@@ -2564,7 +2565,14 @@ function applyFilters() {
   const assignee = document.getElementById('f-assignee')?.value || '';
   const search = (document.getElementById('f-search')?.value || '').toLowerCase();
 
-  let filtered = tasks.filter(t => {
+  // Source of truth:
+  // - No specific assignee selected → show strategic 3-year tasks only (matches dashboard)
+  // - Specific assignee selected → show ALL that person's tasks (strategic + team to-do boards)
+  // This way the default All Tasks view is the 3-year plan, but finance/ops people can still
+  // see their full workload by selecting their own name.
+  const sourceTasks = assignee ? tasks : strategicTasks();
+
+  let filtered = sourceTasks.filter(t => {
     if (pillar && t.pillar !== pillar) return false;
     if (list && t.list !== list) return false;
     if (status && t.status !== status) return false;
@@ -2575,6 +2583,21 @@ function applyFilters() {
     if (search && !t.name.toLowerCase().includes(search) && !t.content.toLowerCase().includes(search)) return false;
     return true;
   });
+
+  // Show a small note above the table so users understand what they're looking at
+  const noteEl = document.getElementById('f-scope-note');
+  if (noteEl) {
+    if (assignee && assignee !== '__unassigned__') {
+      noteEl.textContent = `Showing ALL tasks assigned to ${assignee} (including finance, team to-do, and personal lists).`;
+      noteEl.style.display = 'block';
+    } else if (assignee === '__unassigned__') {
+      noteEl.textContent = 'Showing unassigned 3-year strategic tasks only.';
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.textContent = 'Showing 3-year strategic tasks only. Select a person to see their full workload across all boards.';
+      noteEl.style.display = 'block';
+    }
+  }
 
   renderTable(filtered, document.getElementById('task-table-container'));
 }
