@@ -834,7 +834,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
     <div class="nav-item" data-view="person">By Person</div>
     <div class="nav-item" data-view="workload">Workload</div>
 
-    <div class="section-label">Operational</div>
+    <div class="section-label">Teams</div>
     <div class="nav-item" data-view="gsd">Getting Shit Done</div>
     <div class="nav-item" data-view="monthend">Month End</div>
     <div class="nav-item" data-view="finance">Finance Tasks</div>
@@ -1284,7 +1284,14 @@ function applyPersonFilter() {
   // Original list is stashed in _allTasksRef.ref and restored after render.
   if (!_personFilter) return;
   _allTasksRef.ref = tasks;
-  tasks = tasks.filter(t => (t.assignees || []).includes(_personFilter));
+  tasks = tasks.filter(t => hasAssignee(t, _personFilter));
+}
+
+// Case-insensitive assignee match helper (use this everywhere instead of .includes)
+function hasAssignee(t, name) {
+  if (!name) return true;
+  const target = name.toLowerCase();
+  return (t.assignees || []).some(a => (a || '').toLowerCase() === target);
 }
 
 function restoreAllTasks() {
@@ -1347,7 +1354,7 @@ function renderView() {
       case 'dashboard': renderDashboard(main); break;
       case 'pillars': renderPillars(main); break;
       case 'overdue': renderFilteredList(main, 'Overdue Tasks', t => isOverdue(t)); break;
-      case 'mytasks': renderFilteredList(main, _personFilter ? `${_personFilter}'s Tasks` : 'My Tasks (Robert Harris)', t => t.assignees.includes(_personFilter || 'Robert Harris')); break;
+      case 'mytasks': renderFilteredList(main, _personFilter ? `${_personFilter}'s Tasks` : 'My Tasks (Robert Harris)', t => hasAssignee(t, _personFilter || 'Robert Harris')); break;
       case 'strategic': renderStrategic(main); break;
       case 'person': renderPersonView(main); break;
       case 'workload': renderWorkload(main); break;
@@ -1574,7 +1581,7 @@ function applyFilters() {
     if (status && t.status !== status) return false;
     if (priority && t.priority !== priority) return false;
     if (assignee === '__unassigned__' && t.assignees.length > 0) return false;
-    if (assignee && assignee !== '__unassigned__' && !t.assignees.includes(assignee)) return false;
+    if (assignee && assignee !== '__unassigned__' && !hasAssignee(t, assignee)) return false;
     if (search && !t.name.toLowerCase().includes(search) && !t.content.toLowerCase().includes(search)) return false;
     return true;
   });
@@ -1857,7 +1864,7 @@ function togglePersonTasks(btn, personName) {
     btn.textContent = 'Hide tasks';
     const personTasks = tasks.filter(t =>
       (t.assignees.length === 0 && personName === 'Unassigned') ||
-      t.assignees.includes(personName)
+      hasAssignee(t, personName)
     );
     let html = '';
     personTasks.forEach(t => {
@@ -1975,8 +1982,8 @@ function renderConfig(main) {
           <thead><tr><th>Name</th><th>Tasks Assigned</th><th>Overdue</th></tr></thead>
           <tbody>
             ${TEAM.map(name => {
-              const cnt = tasks.filter(t => t.assignees.includes(name)).length;
-              const od = tasks.filter(t => t.assignees.includes(name) && isOverdue(t)).length;
+              const cnt = tasks.filter(t => hasAssignee(t, name)).length;
+              const od = tasks.filter(t => hasAssignee(t, name) && isOverdue(t)).length;
               return `<tr><td>${esc(name)}</td><td>${cnt}</td><td class="${od > 0 ? 'overdue-text' : ''}">${od}</td></tr>`;
             }).join('')}
           </tbody>
