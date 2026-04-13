@@ -1111,11 +1111,31 @@ try {
 // ══════════════════════════════════════════════════════════════════════════════
 // TEAM LIST
 // ══════════════════════════════════════════════════════════════════════════════
-// Default team — Rob can add more via the Add Person button, stored in localStorage.
+// Default team — full roster from Rob's all-staff list (13/04/2026) plus existing people.
+// Sorted alphabetically. Rob can still add more via the + Add Person button.
 const DEFAULT_TEAM = [
-  'Robert Harris', 'Richard Carlick', 'Richard Magin', 'Issareeya Yeeka',
-  'Jeremy Wheeler', 'Sharon Salt', 'Lisa Fontanot', 'Ravin Singh',
-  'Jasmine Pereira', 'Kate Harris', 'Caine Bowers', 'Aaron Mattin'
+  'Aaron Mattin',
+  'Allan Norton',
+  'Anthony Rose',
+  'Caine Bowers',
+  'David Plumridge',
+  'Issareeya Yeeka',
+  'Jasmine Pereira',
+  'Jay Curds',
+  'Jeremy Wheeler',
+  'Kate Harris',
+  'Kevin Noble',
+  'Kshitij Singh',
+  'Lisa Fontanot',
+  'Maral Movsessian',
+  'Phil Mann',
+  'Ravin Singh',
+  'Richard Carlick',
+  'Richard Magin',
+  'Robert Harris',
+  'Shane Clarke',
+  'Sharon Salt',
+  'Tanya Pacewicz',
 ];
 let TEAM = [...DEFAULT_TEAM];
 
@@ -1594,7 +1614,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-field-map-v10';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-full-team-v11';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1619,6 +1639,20 @@ const NAME_ALIASES = {
   'ploy': 'Issareeya Yeeka',
   'issareeya': 'Issareeya Yeeka',
   'richard': 'Richard Carlick',  // default Richard. If both Richards in same task, second is Magin per data.
+  'tony': 'Anthony Rose',
+  'phil': 'Phil Mann',
+  'phil j. mann': 'Phil Mann',
+  'phil j mann': 'Phil Mann',
+  'maral': 'Maral Movsessian',
+  'david': 'David Plumridge',
+  'david plumridge': 'David Plumridge',
+  'allan': 'Allan Norton',
+  'kevin': 'Kevin Noble',
+  'kshitij': 'Kshitij Singh',
+  'shane': 'Shane Clarke',
+  'tanya': 'Tanya Pacewicz',
+  'jay': 'Jay Curds',
+  'aaron': 'Aaron Mattin',
 };
 
 // Normalise assignee names to canonical TEAM casing (handles legacy ROBERT HARRIS, ravin singh, kate, etc.)
