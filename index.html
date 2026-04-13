@@ -2449,7 +2449,7 @@ function renderDashboard(main) {
     if (cnt === 0) return;
     const barW = Math.min(100, cnt * 3);
     priHtml += `
-      <div class="progress-row">
+      <div class="progress-row" onclick="drillFromKpi('priority::${p}')" style="cursor:pointer;" title="Click to see outstanding ${p === 'none' ? 'unprioritised' : p} tasks">
         <div class="progress-label" style="font-weight:bold;color:${priColors[p]}">${p === 'none' ? 'None' : p}</div>
         <div class="progress-bar-bg">
           <div class="progress-bar-fill" style="width:${barW}%;background:${priColors[p]};"></div>
@@ -2521,6 +2521,12 @@ function renderTaskList(main) {
     const assSel = document.getElementById('f-assignee');
     if (assSel) assSel.value = _assigneePrefilter;
     _assigneePrefilter = null;
+  }
+  // Honour priority pre-filter
+  if (_priorityPrefilter !== null) {
+    const priSel = document.getElementById('f-priority');
+    if (priSel) priSel.value = _priorityPrefilter;
+    _priorityPrefilter = null;
   }
 
   applyFilters();
@@ -2792,6 +2798,7 @@ function setPillarFilter(pillarName) {
 }
 let _pillarPrefilter = null;
 let _statusPrefilter = null;
+let _priorityPrefilter = null;
 
 // Called from dashboard KPI tile or "Outstanding by Person" progress row.
 // Routes to the right drill-down view with pre-filters applied.
@@ -2809,6 +2816,16 @@ function drillFromKpi(kind) {
     const name = kind.slice('person::'.length);
     _assigneePrefilter = name;
     _statusPrefilter = '__not_complete__';   // show only outstanding
+    currentView = 'tasklist';
+    const item = document.querySelector('#sidebar .nav-item[data-view="tasklist"]');
+    if (item) item.classList.add('active');
+    renderView();
+    return;
+  }
+  // priority::<level> drill — show outstanding tasks at that priority
+  if (typeof kind === 'string' && kind.startsWith('priority::')) {
+    _priorityPrefilter = kind.slice('priority::'.length);
+    _statusPrefilter = '__not_complete__';
     currentView = 'tasklist';
     const item = document.querySelector('#sidebar .nav-item[data-view="tasklist"]');
     if (item) item.classList.add('active');
