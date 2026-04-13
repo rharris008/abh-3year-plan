@@ -1163,6 +1163,17 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
           <label>Start Date</label>
           <input type="date" id="modal-start">
         </div>
+        <div style="flex:1">
+          <label>Recurrence <span style="color:#999;font-weight:normal;font-size:11px;">auto-regen on complete</span></label>
+          <select id="modal-recurrence">
+            <option value="">One-off</option>
+            <option value="weekly">Weekly</option>
+            <option value="fortnightly">Fortnightly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annual">Annual</option>
+          </select>
+        </div>
       </div>
 
       <label>Notes / Content</label>
@@ -1644,8 +1655,13 @@ function normaliseTaskAssignees(t) {
 }
 
 // Field mapping between JS camelCase and Supabase snake_case columns.
+// Global flag set once we detect the recurrence column is missing in Supabase.
+// Prevents repeated 400s on every save. Clears on reload, so once Rob runs the
+// ALTER TABLE SQL the flag flips back to false and recurrence starts persisting.
+let _recurrenceColumnMissing = false;
+
 function taskToDbRow(t) {
-  return {
+  const row = {
     id: t.id,
     name: t.name || '',
     status: t.status || 'to do',
@@ -1668,6 +1684,12 @@ function taskToDbRow(t) {
     parent_id: t.parentId || null,
     parent_name: t.parentName || null,
   };
+  // Only include the recurrence column if Supabase has it. Defensive because the
+  // column was added late and some databases may not have been migrated yet.
+  if (!_recurrenceColumnMissing) {
+    row.recurrence = t.recurrence || null;
+  }
+  return row;
 }
 
 function dbRowToTask(r) {
@@ -1693,6 +1715,7 @@ function dbRowToTask(r) {
     pillar: r.pillar || null,
     parentId: r.parent_id || null,
     parentName: r.parent_name || '',
+    recurrence: r.recurrence || null,
   };
 }
 
@@ -1700,10 +1723,17 @@ async function saveToSupabase() {
   if (!sb) return false;
   try {
     // Upsert current local state
-    const { error: upErr } = await sb.from(SB_TABLE).upsert(
+    let { error: upErr } = await sb.from(SB_TABLE).upsert(
       tasks.map(taskToDbRow),
       { onConflict: 'id' }
     );
+    // If the recurrence column is missing (42703), retry once without it
+    if (upErr && (upErr.code === '42703' || (upErr.message || '').includes('recurrence'))) {
+      console.warn('recurrence column missing in Supabase, retrying without it. Run abh_3year_tasks_recurrence.sql in the SQL editor.');
+      _recurrenceColumnMissing = true;
+      const retry = await sb.from(SB_TABLE).upsert(tasks.map(taskToDbRow), { onConflict: 'id' });
+      upErr = retry.error;
+    }
     if (upErr) { console.error('Supabase upsert error:', upErr); return false; }
     // Diff-delete: remove any cloud row whose id is no longer in local tasks
     const { data: cloudRows, error: selErr } = await sb.from(SB_TABLE).select('id');
@@ -3145,6 +3175,7 @@ function openModal(taskId) {
     document.getElementById('modal-priority').value = task.priority;
     document.getElementById('modal-due').value = task.dueDate || '';
     document.getElementById('modal-start').value = task.startDate || '';
+    document.getElementById('modal-recurrence').value = task.recurrence || '';
     document.getElementById('modal-content').value = task.content || '';
     document.getElementById('modal-comment').value = task.latestComment || '';
 
@@ -3167,6 +3198,7 @@ function openModal(taskId) {
     document.getElementById('modal-priority').value = 'NORMAL';
     document.getElementById('modal-due').value = '';
     document.getElementById('modal-start').value = '';
+    document.getElementById('modal-recurrence').value = '';
     document.getElementById('modal-content').value = '';
     document.getElementById('modal-comment').value = '';
     respSelect.value = '';
@@ -3230,14 +3262,28 @@ function saveTask() {
     assignees,
     dueDate: dueVal || null,
     startDate: startVal || null,
+    recurrence: document.getElementById('modal-recurrence').value || null,
     content: document.getElementById('modal-content').value,
     latestComment: document.getElementById('modal-comment').value,
   };
 
+  let regenerated = false;
   if (id) {
     // Update existing
     const task = tasks.find(t => t.id === id);
-    if (task) Object.assign(task, data);
+    if (task) {
+      const wasComplete = task.status === 'complete';
+      const nowComplete = data.status === 'complete';
+      Object.assign(task, data);
+      // Auto-regen: if a recurring task was just marked complete, spawn the next instance
+      if (!wasComplete && nowComplete && task.recurrence) {
+        const next = spawnNextRecurrence(task);
+        if (next) {
+          tasks.push(next);
+          regenerated = true;
+        }
+      }
+    }
   } else {
     // New task
     data.id = 'new_' + Date.now().toString(36) + Math.random().toString(36).substr(2,5);
@@ -3255,7 +3301,39 @@ function saveTask() {
   saveToLocal();
   closeModal();
   renderView();
-  toast(id ? 'Task updated' : 'Task created');
+  toast(regenerated ? 'Task completed + next recurrence created' : (id ? 'Task updated' : 'Task created'));
+}
+
+// Given a recurring task that was just completed, return a clone with a new id
+// and a new due date advanced by the recurrence period. Returns null if the
+// task has no recurrence or no due date to advance from.
+function spawnNextRecurrence(task) {
+  if (!task.recurrence || !task.dueDate) return null;
+  const base = new Date(task.dueDate);
+  if (isNaN(base)) return null;
+  const next = new Date(base);
+  switch (task.recurrence) {
+    case 'weekly':      next.setDate(next.getDate() + 7); break;
+    case 'fortnightly': next.setDate(next.getDate() + 14); break;
+    case 'monthly':     next.setMonth(next.getMonth() + 1); break;
+    case 'quarterly':   next.setMonth(next.getMonth() + 3); break;
+    case 'annual':      next.setFullYear(next.getFullYear() + 1); break;
+    default: return null;
+  }
+  const nextDueIso = next.toISOString().slice(0, 10);
+  return {
+    ...task,
+    id: 'new_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+    status: 'to do',
+    dueDate: nextDueIso,
+    startDate: null,
+    dateCreated: new Date().toISOString().slice(0, 10),
+    dateUpdated: new Date().toISOString().slice(0, 10),
+    dateClosed: null,
+    dateDone: null,
+    latestComment: '',
+    commentCount: 0,
+  };
 }
 
 function deleteTask() {
