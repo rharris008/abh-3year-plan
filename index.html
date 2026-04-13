@@ -924,6 +924,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
     <div class="person-selector">
       <label for="person-filter">Viewing as</label>
       <select id="person-filter" onchange="setPersonFilter(this.value)"></select>
+      <button class="btn btn-sm btn-outline" onclick="addPersonPrompt()" title="Add a person to the team" style="padding:3px 8px;font-size:11px;">+</button>
     </div>
     <div class="countdown" id="countdown"></div>
     <div id="save-indicator" class="clean">SAVED</div>
@@ -1107,11 +1108,40 @@ try {
 // ══════════════════════════════════════════════════════════════════════════════
 // TEAM LIST
 // ══════════════════════════════════════════════════════════════════════════════
-const TEAM = [
+// Default team — Rob can add more via the Add Person button, stored in localStorage.
+const DEFAULT_TEAM = [
   'Robert Harris', 'Richard Carlick', 'Richard Magin', 'Issareeya Yeeka',
   'Jeremy Wheeler', 'Sharon Salt', 'Lisa Fontanot', 'Ravin Singh',
-  'Jasmine Pereira', 'Kate Harris', 'Caine Bowers'
+  'Jasmine Pereira', 'Kate Harris', 'Caine Bowers', 'Aaron Mattin'
 ];
+let TEAM = [...DEFAULT_TEAM];
+
+function loadTeamFromLocal() {
+  try {
+    const raw = localStorage.getItem('abh3y_team');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) TEAM = parsed;
+  } catch (e) { console.warn('team load failed', e); }
+}
+function saveTeamToLocal() {
+  localStorage.setItem('abh3y_team', JSON.stringify(TEAM));
+}
+function addPersonPrompt() {
+  const name = prompt('Add a person to the team.\nEnter their full name (e.g. "Aaron Mattin"):');
+  if (!name) return;
+  const clean = name.trim();
+  if (!clean) return;
+  if (TEAM.some(t => t.toLowerCase() === clean.toLowerCase())) {
+    toast(`${clean} is already on the team`, 'info');
+    return;
+  }
+  TEAM.push(clean);
+  TEAM.sort();
+  saveTeamToLocal();
+  populatePersonFilter();
+  toast(`Added ${clean} to the team`);
+}
 
 const SPACES = [
   'ABH 3 Year $150m turnover goal', 'Richard Magin\'s Tasks',
@@ -1265,6 +1295,19 @@ const PILLAR_COLOURS = {
   'Investing in Our Staff':   '#1ABC9C',
   'Safety Culture':           '#C0392B'
 };
+
+// Track type: 'strategic' (part of the 3-year plan) or 'todo' (team / personal board).
+// Derived from the space; override via task.trackType if explicitly set.
+const STRATEGIC_SPACES = new Set(['ABH 3 Year $150m turnover goal']);
+function getTrackType(t) {
+  if (t && t.trackType) return t.trackType;
+  if (t && STRATEGIC_SPACES.has(t.space || '')) return 'strategic';
+  return 'todo';
+}
+function isStrategic(t) { return getTrackType(t) === 'strategic'; }
+function isTodo(t) { return getTrackType(t) === 'todo'; }
+
+function strategicTasks() { return tasks.filter(isStrategic); }
 
 // JS-side keyword classifier — safety net for any task missing a pillar.
 function classifyPillar(t) {
@@ -1548,7 +1591,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-clickup-full-v7';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-strategic-split-v8';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1649,6 +1692,7 @@ async function saveAll() {
 }
 
 async function initData() {
+  loadTeamFromLocal();
   loadTeamsFromLocal();
   applyTeamLabelsToSidebar();
   // Try Supabase first, then localStorage, then seed data
@@ -1886,6 +1930,8 @@ function resetQuarterToCurrent() {
 // DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════════
 function renderDashboard(main) {
+  // Dashboard only shows the 3-Year Strategic Plan tasks, not team to-do boards.
+  const tasks = strategicTasks();
   const total = tasks.length;
   const inProg = tasks.filter(t => t.status === 'in progress').length;
   const toDo = tasks.filter(t => t.status === 'to do').length;
@@ -2279,6 +2325,8 @@ function renderFilteredList(main, title, filterFn) {
 // PILLARS VIEW (the 7 strategic pillars with progress)
 // ══════════════════════════════════════════════════════════════════════════════
 function renderPillars(main) {
+  // Pillars only apply to strategic tasks (team to-do boards are excluded).
+  const tasks = strategicTasks();
   const stats = {};
   PILLARS.forEach(p => stats[p] = { total: 0, complete: 0, inProgress: 0, overdue: 0, todo: 0 });
   let unassigned = 0;
