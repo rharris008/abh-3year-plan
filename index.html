@@ -704,6 +704,67 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 #sidebar::-webkit-scrollbar { width: 4px; }
 #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
+/* ══ QUARTER BANNER (dashboard period selector) ══════════════════════════════ */
+.quarter-banner {
+  background: linear-gradient(135deg, var(--navy) 0%, #253b63 100%);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.quarter-banner .quarter-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.quarter-banner .qnav-btn {
+  background: rgba(255,255,255,0.12);
+  color: var(--white);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.quarter-banner .qnav-btn:hover { background: rgba(255,255,255,0.22); }
+.quarter-banner .quarter-current-label {
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+.quarter-banner .quarter-current-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.65);
+  margin-top: 2px;
+}
+.quarter-banner .quarter-current-tag.warn { color: var(--amber); }
+.quarter-banner .quarter-stats {
+  display: flex;
+  gap: 18px;
+}
+.quarter-banner .qstat {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+}
+.quarter-banner .qstat b {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--white);
+  margin-right: 4px;
+}
+.quarter-banner .qstat.green b { color: var(--green); }
+.quarter-banner .qstat.red b { color: var(--red); }
+
 /* ══ RACE ROLE BADGES (R = Responsible, A = Accountable, C = Consulted) ══════ */
 .role-badge {
   display: inline-block;
@@ -1646,6 +1707,54 @@ function renderView() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// QUARTER HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+function getQuarterFromDate(d) {
+  const m = d.getMonth();
+  return { year: d.getFullYear(), q: Math.floor(m / 3) + 1 };
+}
+function getCurrentQuarter() { return getQuarterFromDate(new Date()); }
+function getPrevQuarter(year, q) {
+  if (q === 1) return { year: year - 1, q: 4 };
+  return { year, q: q - 1 };
+}
+function getNextQuarter(year, q) {
+  if (q === 4) return { year: year + 1, q: 1 };
+  return { year, q: q + 1 };
+}
+function quarterRange(year, q) {
+  const startMonth = (q - 1) * 3;
+  return {
+    start: new Date(year, startMonth, 1),
+    end: new Date(year, startMonth + 3, 0, 23, 59, 59, 999),
+  };
+}
+function quarterLabel(year, q) {
+  const months = [['Jan','Mar'], ['Apr','Jun'], ['Jul','Sep'], ['Oct','Dec']];
+  return `Q${q} ${year} (${months[q-1][0]}-${months[q-1][1]})`;
+}
+function tasksDueInQuarter(year, q) {
+  const r = quarterRange(year, q);
+  return tasks.filter(t => {
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate);
+    if (isNaN(d)) return false;
+    return d >= r.start && d <= r.end;
+  });
+}
+
+let _selectedQuarter = getCurrentQuarter();
+function shiftQuarter(delta) {
+  if (delta < 0) _selectedQuarter = getPrevQuarter(_selectedQuarter.year, _selectedQuarter.q);
+  else _selectedQuarter = getNextQuarter(_selectedQuarter.year, _selectedQuarter.q);
+  renderView();
+}
+function resetQuarterToCurrent() {
+  _selectedQuarter = getCurrentQuarter();
+  renderView();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════════
 function renderDashboard(main) {
@@ -1686,10 +1795,64 @@ function renderDashboard(main) {
   const overdueList = tasks.filter(t => isOverdue(t))
     .sort((a,b) => daysDiff(a.dueDate) - daysDiff(b.dueDate));
 
+  // Quarter focus: selected quarter + carried over from previous
+  const sel = _selectedQuarter;
+  const prev = getPrevQuarter(sel.year, sel.q);
+  const cur = getCurrentQuarter();
+  const isCurrent = sel.year === cur.year && sel.q === cur.q;
+  const thisQ = tasksDueInQuarter(sel.year, sel.q);
+  const thisQOpen = thisQ.filter(t => t.status !== 'complete');
+  const thisQDone = thisQ.filter(t => t.status === 'complete');
+  const carried = tasksDueInQuarter(prev.year, prev.q).filter(t => t.status !== 'complete');
+
+  function quarterTaskRow(t) {
+    return `<tr onclick="openModal('${t.id}')">
+      <td class="task-name-cell">${esc(t.name)}</td>
+      <td class="col-r">${nameCell(getResponsible(t), 'r')}</td>
+      <td class="col-a">${nameCell(getAccountable(t), 'a')}</td>
+      <td>${statusBadge(t)}</td>
+      <td style="font-size:12px;">${fmtDate(t.dueDate)}</td>
+    </tr>`;
+  }
+  function quarterTaskTable(list, emptyText) {
+    if (list.length === 0) return `<div style="padding:18px;text-align:center;color:#999;font-size:12px;">${emptyText}</div>`;
+    return '<table class="task-table"><thead><tr><th>Task</th><th class="col-r">R</th><th class="col-a">A</th><th>Status</th><th>Due</th></tr></thead><tbody>' +
+      list.map(quarterTaskRow).join('') + '</tbody></table>';
+  }
+
   main.innerHTML = `
     <div class="view-header">
       <div class="view-title">Dashboard</div>
       <div style="font-size:12px;color:#666;">${total} tasks across ${PILLARS.length} pillars</div>
+    </div>
+
+    <!-- Quarter focus banner -->
+    <div class="quarter-banner">
+      <div class="quarter-nav">
+        <button class="qnav-btn" onclick="shiftQuarter(-1)" title="Previous quarter">&#9664;</button>
+        <div class="quarter-current">
+          <div class="quarter-current-label">${quarterLabel(sel.year, sel.q)}</div>
+          ${isCurrent ? '<div class="quarter-current-tag">Current quarter</div>' : `<div class="quarter-current-tag warn">Viewing past/future</div>`}
+        </div>
+        <button class="qnav-btn" onclick="shiftQuarter(1)" title="Next quarter">&#9654;</button>
+        ${!isCurrent ? '<button class="btn btn-sm btn-outline" onclick="resetQuarterToCurrent()" style="margin-left:8px;">Today</button>' : ''}
+      </div>
+      <div class="quarter-stats">
+        <div class="qstat"><b>${thisQOpen.length}</b> open this quarter</div>
+        <div class="qstat green"><b>${thisQDone.length}</b> done</div>
+        <div class="qstat red"><b>${carried.length}</b> carried from ${quarterLabel(prev.year, prev.q).split(' ')[0]} ${prev.year}</div>
+      </div>
+    </div>
+
+    <div class="chart-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 18px;">
+      <div class="card">
+        <div class="card-header">This quarter (${quarterLabel(sel.year, sel.q)})</div>
+        <div class="card-body">${quarterTaskTable(thisQOpen, 'Nothing open this quarter.')}</div>
+      </div>
+      <div class="card">
+        <div class="card-header" style="background:var(--red);">Carried over from ${quarterLabel(prev.year, prev.q).replace(/ \(.*\)$/, '')}</div>
+        <div class="card-body">${quarterTaskTable(carried, 'Nothing left over.')}</div>
+      </div>
     </div>
 
     <div class="kpi-row">
