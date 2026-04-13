@@ -8,7 +8,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ABH 3-Year Plan: 30 Day Bites</title>
+<title>3 Year Plan - $150m Turnover Goal</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ══ ABH BRAND TOKENS ════════════════════════════════════════════════════════ */
@@ -46,29 +46,70 @@ input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 56px;
+  padding: 0 20px;
+  height: 64px;
   flex-shrink: 0;
   z-index: 100;
+  gap: 20px;
+}
+#app-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
 }
 #app-header .logo {
-  font-size: 22px;
-  font-weight: bold;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  height: 44px;
 }
-#app-header .logo span { color: var(--blue); }
+#app-header .logo img {
+  height: 44px;
+  width: auto;
+  display: block;
+}
 #app-header .title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: bold;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  color: rgba(255,255,255,0.92);
+  white-space: nowrap;
 }
 #app-header .right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   font-size: 12px;
+  flex-shrink: 0;
+}
+#app-header .person-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.1);
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+#app-header .person-selector label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: bold;
+}
+#app-header .person-selector select {
+  background: transparent;
+  color: var(--white);
+  border: none;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  padding: 2px 6px 2px 2px;
+  cursor: pointer;
+  outline: none;
+}
+#app-header .person-selector select option {
+  color: var(--dktext);
+  background: var(--white);
 }
 #app-header .countdown {
   background: rgba(255,255,255,0.1);
@@ -635,9 +676,15 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 
 <!-- ══ HEADER ═════════════════════════════════════════════════════════════ -->
 <header id="app-header">
-  <div class="logo"><span>ABH</span></div>
-  <div class="title">3-Year Plan: 30 Day Bites</div>
+  <div class="header-left">
+    <div class="logo"><img src="abh-logo.png" alt="ABH"></div>
+    <div class="title">3 Year Plan - $150m Turnover Goal</div>
+  </div>
   <div class="right">
+    <div class="person-selector">
+      <label for="person-filter">Viewing as</label>
+      <select id="person-filter" onchange="setPersonFilter(this.value)"></select>
+    </div>
     <div class="countdown" id="countdown"></div>
     <div id="save-indicator" class="clean">SAVED</div>
     <button class="btn btn-sm btn-primary" onclick="saveAll()">Save</button>
@@ -1058,7 +1105,46 @@ async function initData() {
       toast('Initialised with seed data', 'info');
     }
   }
+  populatePersonFilter();
   renderView();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PERSON FILTER (header dropdown — "Viewing as" lens applied across views)
+// ══════════════════════════════════════════════════════════════════════════════
+let _personFilter = '';
+const _allTasksRef = { ref: null };
+
+function populatePersonFilter() {
+  const sel = document.getElementById('person-filter');
+  if (!sel) return;
+  // Use TEAM as the canonical list of names
+  const opts = ['<option value="">All</option>'];
+  TEAM.forEach(name => {
+    opts.push(`<option value="${esc(name)}">${esc(name)}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+  sel.value = _personFilter;
+}
+
+function setPersonFilter(name) {
+  _personFilter = name || '';
+  renderView();
+}
+
+function applyPersonFilter() {
+  // Mutates the global `tasks` reference so render functions see only the filtered list.
+  // Original list is stashed in _allTasksRef.ref and restored after render.
+  if (!_personFilter) return;
+  _allTasksRef.ref = tasks;
+  tasks = tasks.filter(t => (t.assignees || []).includes(_personFilter));
+}
+
+function restoreAllTasks() {
+  if (_allTasksRef.ref) {
+    tasks = _allTasksRef.ref;
+    _allTasksRef.ref = null;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1076,21 +1162,28 @@ document.querySelectorAll('#sidebar .nav-item').forEach(item => {
 
 function renderView() {
   const main = document.getElementById('main');
-  switch(currentView) {
-    case 'dashboard': renderDashboard(main); break;
-    case 'overdue': renderFilteredList(main, 'Overdue Tasks', t => isOverdue(t)); break;
-    case 'mytasks': renderFilteredList(main, 'My Tasks (ROBERT HARRIS)', t => t.assignees.includes('ROBERT HARRIS')); break;
-    case 'strategic': renderStrategic(main); break;
-    case 'q1': renderFilteredList(main, 'Q1 Priorities: Stabilise Core Operations', t => t.list && t.list.includes('Q1 Strategic')); break;
-    case 'q2': renderFilteredList(main, 'Q2 Priorities: Start to Scale for Growth', t => t.list && t.list.includes('Q2 Strategic')); break;
-    case 'person': renderPersonView(main); break;
-    case 'workload': renderWorkload(main); break;
-    case 'gsd': renderFilteredList(main, 'Getting Shit Done', t => t.space === 'Getting Shit done'); break;
-    case 'monthend': renderFilteredList(main, 'Month End Reminders', t => t.space === 'Month end reminders'); break;
-    case 'finance': renderFilteredList(main, 'Finance Tasks', t => t.space === 'Finance Task reallocations' || t.space === 'Finance Team ongoing efficiency'); break;
-    case 'tasklist': renderTaskList(main); break;
-    case 'timeline': renderTimeline(main); break;
-    case 'config': renderConfig(main); break;
+  // By Person view always shows everyone; config doesn't read tasks. Both skip the filter.
+  const skipFilter = (currentView === 'person' || currentView === 'config');
+  if (!skipFilter) applyPersonFilter();
+  try {
+    switch(currentView) {
+      case 'dashboard': renderDashboard(main); break;
+      case 'overdue': renderFilteredList(main, 'Overdue Tasks', t => isOverdue(t)); break;
+      case 'mytasks': renderFilteredList(main, _personFilter ? `${_personFilter}'s Tasks` : 'My Tasks (ROBERT HARRIS)', t => t.assignees.includes(_personFilter || 'ROBERT HARRIS')); break;
+      case 'strategic': renderStrategic(main); break;
+      case 'q1': renderFilteredList(main, 'Q1 Priorities: Stabilise Core Operations', t => t.list && t.list.includes('Q1 Strategic')); break;
+      case 'q2': renderFilteredList(main, 'Q2 Priorities: Start to Scale for Growth', t => t.list && t.list.includes('Q2 Strategic')); break;
+      case 'person': renderPersonView(main); break;
+      case 'workload': renderWorkload(main); break;
+      case 'gsd': renderFilteredList(main, 'Getting Shit Done', t => t.space === 'Getting Shit done'); break;
+      case 'monthend': renderFilteredList(main, 'Month End Reminders', t => t.space === 'Month end reminders'); break;
+      case 'finance': renderFilteredList(main, 'Finance Tasks', t => t.space === 'Finance Task reallocations' || t.space === 'Finance Team ongoing efficiency'); break;
+      case 'tasklist': renderTaskList(main); break;
+      case 'timeline': renderTimeline(main); break;
+      case 'config': renderConfig(main); break;
+    }
+  } finally {
+    restoreAllTasks();
   }
 }
 
