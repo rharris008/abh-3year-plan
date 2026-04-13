@@ -629,202 +629,14 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 /* Scrollbar styling */
 #sidebar::-webkit-scrollbar { width: 4px; }
 #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
-
-/* ══ HEADER LAYOUT (with search bar) ═════════════════════════════════════════ */
-#app-header .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
-}
-#app-header .title {
-  position: static;
-  transform: none;
-  font-size: 14px;
-  font-weight: bold;
-  color: rgba(255,255,255,0.85);
-}
-#app-header .search-wrap {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  padding: 0 24px;
-}
-#app-header .search-wrap input {
-  width: 100%;
-  max-width: 480px;
-  padding: 8px 12px 8px 34px;
-  border: none;
-  border-radius: 4px;
-  background-color: rgba(255,255,255,0.12);
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
-  background-repeat: no-repeat;
-  background-position: 10px center;
-  color: var(--white);
-  font-size: 13px;
-  font-family: Arial, sans-serif;
-}
-#app-header .search-wrap input::placeholder {
-  color: rgba(255,255,255,0.55);
-}
-#app-header .search-wrap input:focus {
-  outline: none;
-  background-color: rgba(255,255,255,0.2);
-}
-
-/* ══ SIDEBAR COUNT BADGES ════════════════════════════════════════════════════ */
-#sidebar .nav-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-#sidebar .nav-item .nav-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-#sidebar .nav-count {
-  background: rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.85);
-  font-size: 10px;
-  font-weight: bold;
-  padding: 2px 8px;
-  border-radius: 10px;
-  min-width: 22px;
-  text-align: center;
-  flex-shrink: 0;
-}
-#sidebar .nav-count:empty {
-  display: none;
-}
-#sidebar .nav-count.urgent {
-  background: var(--red);
-  color: var(--white);
-}
-#sidebar .nav-item.active .nav-count {
-  background: var(--blue);
-  color: var(--white);
-}
-
-/* ══ GOALS BANNER ════════════════════════════════════════════════════════════ */
-.goals-banner {
-  background: linear-gradient(135deg, var(--navy) 0%, #253b63 100%);
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  color: var(--white);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-}
-.goals-banner-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.goals-banner-title {
-  font-size: 12px;
-  font-weight: bold;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--blue);
-}
-.goals-banner-subtitle {
-  font-size: 11px;
-  color: rgba(255,255,255,0.6);
-}
-.goals-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 10px;
-}
-.goal-tile {
-  background: rgba(255,255,255,0.08);
-  border-radius: 6px;
-  padding: 10px 12px;
-  border-left: 3px solid var(--blue);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.goal-tile:hover {
-  background: rgba(255,255,255,0.14);
-}
-.goal-tile.complete {
-  border-left-color: var(--green);
-  background: rgba(39,174,96,0.18);
-}
-.goal-tile.in-progress {
-  border-left-color: var(--amber);
-  background: rgba(230,126,34,0.15);
-}
-.goal-text {
-  font-size: 12px;
-  font-weight: bold;
-  line-height: 1.35;
-  color: var(--white);
-}
-.goal-status {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-top: 6px;
-  color: rgba(255,255,255,0.65);
-}
-
-/* ══ TODAY VIEW ══════════════════════════════════════════════════════════════ */
-.today-section {
-  margin-bottom: 24px;
-}
-.today-section-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.today-section-title {
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--navy);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.today-section-count {
-  background: var(--ltgrey);
-  color: var(--dktext);
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: bold;
-}
-.today-section-count.red { background: var(--red); color: var(--white); }
-.today-section-count.amber { background: var(--amber); color: var(--white); }
-.today-section-count.blue { background: var(--blue); color: var(--white); }
-.today-section-count.green { background: var(--green); color: var(--white); }
-.today-allclear {
-  text-align: center;
-  color: var(--green);
-  padding: 40px 20px;
-  font-size: 18px;
-  font-weight: bold;
-  background: var(--white);
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
 </style>
 </head>
 <body>
 
 <!-- ══ HEADER ═════════════════════════════════════════════════════════════ -->
 <header id="app-header">
-  <div class="header-left">
-    <div class="logo"><span>ABH</span></div>
-    <div class="title">3-Year Plan: 30 Day Bites</div>
-  </div>
-  <div class="search-wrap">
-    <input type="text" id="global-search" placeholder="Search tasks, owners, comments..." oninput="applySearch(this.value)" autocomplete="off">
-  </div>
+  <div class="logo"><span>ABH</span></div>
+  <div class="title">3-Year Plan: 30 Day Bites</div>
   <div class="right">
     <div class="countdown" id="countdown"></div>
     <div id="save-indicator" class="clean">SAVED</div>
@@ -837,32 +649,30 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
   <!-- Sidebar -->
   <nav id="sidebar">
     <div class="section-label">Command</div>
-    <div class="nav-item active" data-view="today"><span class="nav-label">Today</span><span class="nav-count" id="cnt-today"></span></div>
-    <div class="nav-item" data-view="dashboard"><span class="nav-label">Dashboard</span><span class="nav-count" id="cnt-dashboard"></span></div>
-    <div class="nav-item" data-view="overdue"><span class="nav-label">Overdue</span><span class="nav-count" id="cnt-overdue"></span></div>
-    <div class="nav-item" data-view="mytasks"><span class="nav-label">My Tasks</span><span class="nav-count" id="cnt-mytasks"></span></div>
-    <div class="nav-item" data-view="personal"><span class="nav-label">Personal</span><span class="nav-count" id="cnt-personal"></span></div>
+    <div class="nav-item active" data-view="dashboard">Dashboard</div>
+    <div class="nav-item" data-view="overdue">Overdue</div>
+    <div class="nav-item" data-view="mytasks">My Tasks</div>
 
     <div class="section-label">Strategic</div>
-    <div class="nav-item" data-view="strategic"><span class="nav-label">3-Year Outcomes</span><span class="nav-count" id="cnt-strategic"></span></div>
-    <div class="nav-item" data-view="q1"><span class="nav-label">Q1 Priorities</span><span class="nav-count" id="cnt-q1"></span></div>
-    <div class="nav-item" data-view="q2"><span class="nav-label">Q2 Priorities</span><span class="nav-count" id="cnt-q2"></span></div>
+    <div class="nav-item" data-view="strategic">3-Year Outcomes</div>
+    <div class="nav-item" data-view="q1">Q1 Priorities</div>
+    <div class="nav-item" data-view="q2">Q2 Priorities</div>
 
     <div class="section-label">Teams</div>
-    <div class="nav-item" data-view="person"><span class="nav-label">By Person</span><span class="nav-count" id="cnt-person"></span></div>
-    <div class="nav-item" data-view="workload"><span class="nav-label">Workload</span><span class="nav-count" id="cnt-workload"></span></div>
+    <div class="nav-item" data-view="person">By Person</div>
+    <div class="nav-item" data-view="workload">Workload</div>
 
     <div class="section-label">Operational</div>
-    <div class="nav-item" data-view="gsd"><span class="nav-label">Getting Shit Done</span><span class="nav-count" id="cnt-gsd"></span></div>
-    <div class="nav-item" data-view="monthend"><span class="nav-label">Month End</span><span class="nav-count" id="cnt-monthend"></span></div>
-    <div class="nav-item" data-view="finance"><span class="nav-label">Finance Tasks</span><span class="nav-count" id="cnt-finance"></span></div>
+    <div class="nav-item" data-view="gsd">Getting Shit Done</div>
+    <div class="nav-item" data-view="monthend">Month End</div>
+    <div class="nav-item" data-view="finance">Finance Tasks</div>
 
     <div class="section-label">All</div>
-    <div class="nav-item" data-view="tasklist"><span class="nav-label">All Tasks</span><span class="nav-count" id="cnt-tasklist"></span></div>
-    <div class="nav-item" data-view="timeline"><span class="nav-label">Timeline</span><span class="nav-count" id="cnt-timeline"></span></div>
+    <div class="nav-item" data-view="tasklist">All Tasks</div>
+    <div class="nav-item" data-view="timeline">Timeline</div>
 
     <div class="section-label">Config</div>
-    <div class="nav-item" data-view="config"><span class="nav-label">Team &amp; Import/Export</span></div>
+    <div class="nav-item" data-view="config">Team &amp; Import/Export</div>
   </nav>
 
   <!-- Main Content -->
@@ -977,8 +787,7 @@ const TEAM = [
 const SPACES = [
   'ABH 3 Year $150m turnover goal', 'Richard Magin\'s Tasks',
   'Finance Task reallocations', 'Getting Shit done',
-  'Month end reminders', 'Finance Team ongoing efficiency', 'My tasks',
-  'Personal'
+  'Month end reminders', 'Finance Team ongoing efficiency', 'My tasks'
 ];
 
 const LISTS = [
@@ -1075,7 +884,7 @@ const SEED_TASKS = [
 // ══════════════════════════════════════════════════════════════════════════════
 let tasks = [];
 let dirty = false;
-let currentView = 'today';
+let currentView = 'dashboard';
 let sortCol = null;
 let sortAsc = true;
 
@@ -1265,233 +1074,12 @@ document.querySelectorAll('#sidebar .nav-item').forEach(item => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SEARCH (global): matches name, content, comments, owners
-// ══════════════════════════════════════════════════════════════════════════════
-let _searchQuery = '';
-function applySearch(query) {
-  _searchQuery = (query || '').trim().toLowerCase();
-  renderView();
-}
-function matchesSearch(t) {
-  if (!_searchQuery) return true;
-  const q = _searchQuery;
-  return (t.name || '').toLowerCase().includes(q) ||
-         (t.content || '').toLowerCase().includes(q) ||
-         (t.latestComment || '').toLowerCase().includes(q) ||
-         (t.assignees || []).some(a => (a || '').toLowerCase().includes(q));
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// STRATEGIC GOALS BANNER
-// ══════════════════════════════════════════════════════════════════════════════
-function getStrategicGoals() {
-  return tasks.filter(t => t.folder === '3-Year Target');
-}
-
-function renderGoalsBanner() {
-  const goals = getStrategicGoals();
-  if (goals.length === 0) return '';
-  const completed = goals.filter(g => g.status === 'complete').length;
-  const tiles = goals.map(g => {
-    let cls = '';
-    let label = 'Planned';
-    if (g.status === 'complete') { cls = 'complete'; label = 'Complete'; }
-    else if (g.status === 'in progress') { cls = 'in-progress'; label = 'In progress'; }
-    return `<div class="goal-tile ${cls}" onclick="openModal('${g.id}')">
-      <div class="goal-text">${esc(g.name)}</div>
-      <div class="goal-status">${label}</div>
-    </div>`;
-  }).join('');
-  return `
-    <div class="goals-banner">
-      <div class="goals-banner-header">
-        <div class="goals-banner-title">3-Year Strategic Goals (Dec 2028)</div>
-        <div class="goals-banner-subtitle">${completed} of ${goals.length} achieved</div>
-      </div>
-      <div class="goals-grid">${tiles}</div>
-    </div>
-  `;
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// TODAY VIEW
-// ══════════════════════════════════════════════════════════════════════════════
-function renderToday(main) {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
-
-  function asMidnight(iso) {
-    if (!iso) return null;
-    const d = new Date(iso);
-    if (isNaN(d)) return null;
-    d.setHours(0,0,0,0);
-    return d;
-  }
-
-  const overdue = tasks.filter(t => {
-    if (t.status === 'complete') return false;
-    const d = asMidnight(t.dueDate);
-    return d && d < today;
-  });
-  const dueToday = tasks.filter(t => {
-    if (t.status === 'complete') return false;
-    const d = asMidnight(t.dueDate);
-    return d && d.getTime() === today.getTime();
-  });
-  const dueThisWeek = tasks.filter(t => {
-    if (t.status === 'complete') return false;
-    const d = asMidnight(t.dueDate);
-    return d && d > today && d <= weekEnd;
-  });
-  const completedToday = tasks.filter(t => {
-    if (t.status !== 'complete') return false;
-    const d = asMidnight(t.dateDone || t.dateClosed);
-    return d && d.getTime() === today.getTime();
-  });
-
-  const todayName = today.toLocaleDateString('en-AU', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-
-  function section(title, list, colorClass) {
-    if (list.length === 0) return '';
-    list.sort((a,b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
-    const rows = list.map(t => {
-      const owners = t.assignees.join(', ') || 'unassigned';
-      const dd = fmtDateShort(t.dueDate);
-      const pri = (t.priority && t.priority !== 'none')
-        ? `<span class="priority-${t.priority.toLowerCase()}">${t.priority}</span>`
-        : '';
-      return `<tr onclick="openModal('${t.id}')">
-        <td class="task-name-cell">${esc(t.name)}</td>
-        <td>${esc(owners)}</td>
-        <td>${dd}</td>
-        <td>${pri}</td>
-        <td>${statusBadge(t)}</td>
-      </tr>`;
-    }).join('');
-    return `
-      <div class="today-section">
-        <div class="today-section-header">
-          <div class="today-section-title">${title}</div>
-          <div class="today-section-count ${colorClass}">${list.length}</div>
-        </div>
-        <table class="task-table">
-          <thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  let html = `
-    <div class="view-header">
-      <div class="view-title">Today</div>
-      <div style="font-size:12px;color:#666;">${todayName}</div>
-    </div>
-  `;
-  html += section('Overdue', overdue, 'red');
-  html += section('Due today', dueToday, 'amber');
-  html += section('Due in the next 7 days', dueThisWeek, 'blue');
-  html += section('Completed today', completedToday, 'green');
-  if (overdue.length === 0 && dueToday.length === 0 && dueThisWeek.length === 0) {
-    html += '<div class="today-allclear">All clear. Nothing overdue, nothing due today, nothing this week.</div>';
-  }
-  main.innerHTML = html;
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// SEARCH RESULTS VIEW (renders when search bar has a value)
-// ══════════════════════════════════════════════════════════════════════════════
-function renderSearchResults(main) {
-  const matches = tasks.filter(matchesSearch);
-  let html = `
-    <div class="view-header">
-      <div class="view-title">Search results</div>
-      <div style="font-size:12px;color:#666;">${matches.length} match${matches.length === 1 ? '' : 'es'} for "${esc(_searchQuery)}"</div>
-    </div>
-  `;
-  if (matches.length === 0) {
-    html += '<div class="today-allclear" style="color:#999;">No matches. Try a different search.</div>';
-    main.innerHTML = html;
-    return;
-  }
-  matches.sort((a,b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999'));
-  let rows = matches.map(t => {
-    const owners = t.assignees.join(', ') || 'unassigned';
-    const dd = fmtDateShort(t.dueDate);
-    const pri = (t.priority && t.priority !== 'none')
-      ? `<span class="priority-${t.priority.toLowerCase()}">${t.priority}</span>` : '';
-    return `<tr onclick="openModal('${t.id}')">
-      <td class="task-name-cell">${esc(t.name)}</td>
-      <td>${esc(owners)}</td>
-      <td>${dd}</td>
-      <td>${pri}</td>
-      <td>${statusBadge(t)}</td>
-      <td style="font-size:11px;color:#666;">${esc((t.list || t.space || '').substring(0, 30))}</td>
-    </tr>`;
-  }).join('');
-  html += `<table class="task-table">
-    <thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th>List</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
-  main.innerHTML = html;
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// SIDEBAR COUNT BADGES
-// ══════════════════════════════════════════════════════════════════════════════
-function updateSidebarCounts() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
-  function dueWithin(t, end) {
-    if (t.status === 'complete') return false;
-    if (!t.dueDate) return false;
-    const d = new Date(t.dueDate); d.setHours(0,0,0,0);
-    return d <= end;
-  }
-  const counts = {
-    today: tasks.filter(t => dueWithin(t, today) || (t.dueDate && new Date(t.dueDate) < today && t.status !== 'complete')).length,
-    dashboard: tasks.length,
-    overdue: tasks.filter(t => isOverdue(t)).length,
-    mytasks: tasks.filter(t => t.assignees.includes('ROBERT HARRIS') && t.status !== 'complete').length,
-    personal: tasks.filter(t => t.space === 'Personal' && t.status !== 'complete').length,
-    strategic: tasks.filter(t => t.folder === '3-Year Target').length,
-    q1: tasks.filter(t => t.list && t.list.includes('Q1 Strategic') && t.status !== 'complete').length,
-    q2: tasks.filter(t => t.list && t.list.includes('Q2 Strategic') && t.status !== 'complete').length,
-    person: new Set(tasks.flatMap(t => t.assignees)).size,
-    workload: tasks.filter(t => t.status !== 'complete').length,
-    gsd: tasks.filter(t => t.space === 'Getting Shit done' && t.status !== 'complete').length,
-    monthend: tasks.filter(t => t.space === 'Month end reminders' && t.status !== 'complete').length,
-    finance: tasks.filter(t => (t.space === 'Finance Task reallocations' || t.space === 'Finance Team ongoing efficiency') && t.status !== 'complete').length,
-    tasklist: tasks.length,
-    timeline: tasks.filter(t => t.dueDate).length,
-  };
-  Object.entries(counts).forEach(([view, count]) => {
-    const el = document.getElementById('cnt-' + view);
-    if (el) {
-      el.textContent = count > 0 ? count : '';
-      el.className = 'nav-count' + ((view === 'overdue' || view === 'today') && count > 0 ? ' urgent' : '');
-    }
-  });
-}
-
 function renderView() {
-  updateSidebarCounts();
   const main = document.getElementById('main');
-
-  // Search overrides current view when active
-  if (_searchQuery) {
-    renderSearchResults(main);
-    main.innerHTML = renderGoalsBanner() + main.innerHTML;
-    return;
-  }
-
   switch(currentView) {
-    case 'today': renderToday(main); break;
     case 'dashboard': renderDashboard(main); break;
     case 'overdue': renderFilteredList(main, 'Overdue Tasks', t => isOverdue(t)); break;
     case 'mytasks': renderFilteredList(main, 'My Tasks (ROBERT HARRIS)', t => t.assignees.includes('ROBERT HARRIS')); break;
-    case 'personal': renderFilteredList(main, 'Personal Tasks', t => t.space === 'Personal'); break;
     case 'strategic': renderStrategic(main); break;
     case 'q1': renderFilteredList(main, 'Q1 Priorities: Stabilise Core Operations', t => t.list && t.list.includes('Q1 Strategic')); break;
     case 'q2': renderFilteredList(main, 'Q2 Priorities: Start to Scale for Growth', t => t.list && t.list.includes('Q2 Strategic')); break;
@@ -1503,12 +1091,6 @@ function renderView() {
     case 'tasklist': renderTaskList(main); break;
     case 'timeline': renderTimeline(main); break;
     case 'config': renderConfig(main); break;
-    default: renderToday(main); break;
-  }
-
-  // Goals banner sits on top of every content view (not config)
-  if (currentView !== 'config') {
-    main.innerHTML = renderGoalsBanner() + main.innerHTML;
   }
 }
 
