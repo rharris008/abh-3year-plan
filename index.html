@@ -1484,7 +1484,7 @@ function markClean() {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-default-dash-v4';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-04-13-revert-quarter-v5';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 
 function saveToLocal() {
@@ -1859,64 +1859,10 @@ function renderDashboard(main) {
   const overdueList = tasks.filter(t => isOverdue(t))
     .sort((a,b) => daysDiff(a.dueDate) - daysDiff(b.dueDate));
 
-  // Quarter focus: selected quarter + carried over from previous
-  const sel = _selectedQuarter;
-  const prev = getPrevQuarter(sel.year, sel.q);
-  const cur = getCurrentQuarter();
-  const isCurrent = sel.year === cur.year && sel.q === cur.q;
-  const thisQ = tasksDueInQuarter(sel.year, sel.q);
-  const thisQOpen = thisQ.filter(t => t.status !== 'complete');
-  const thisQDone = thisQ.filter(t => t.status === 'complete');
-  const carried = tasksDueInQuarter(prev.year, prev.q).filter(t => t.status !== 'complete');
-
-  function quarterTaskRow(t) {
-    return `<tr onclick="openModal('${t.id}')">
-      <td class="task-name-cell">${esc(t.name)}</td>
-      <td class="col-r">${nameCell(getResponsible(t), 'r')}</td>
-      <td class="col-a">${nameCell(getAccountable(t), 'a')}</td>
-      <td>${statusBadge(t)}</td>
-      <td style="font-size:12px;">${fmtDate(t.dueDate)}</td>
-    </tr>`;
-  }
-  function quarterTaskTable(list, emptyText) {
-    if (list.length === 0) return `<div style="padding:18px;text-align:center;color:#999;font-size:12px;">${emptyText}</div>`;
-    return '<table class="task-table"><thead><tr><th>Task</th><th class="col-r">R</th><th class="col-a">A</th><th>Status</th><th>Due</th></tr></thead><tbody>' +
-      list.map(quarterTaskRow).join('') + '</tbody></table>';
-  }
-
   main.innerHTML = `
     <div class="view-header">
       <div class="view-title">Dashboard</div>
       <div style="font-size:12px;color:#666;">${total} tasks across ${PILLARS.length} pillars</div>
-    </div>
-
-    <!-- Quarter focus banner -->
-    <div class="quarter-banner">
-      <div class="quarter-nav">
-        <button class="qnav-btn" onclick="shiftQuarter(-1)" title="Previous quarter">&#9664;</button>
-        <div class="quarter-current">
-          <div class="quarter-current-label">${quarterLabel(sel.year, sel.q)}</div>
-          ${isCurrent ? '<div class="quarter-current-tag">Current quarter</div>' : `<div class="quarter-current-tag warn">Viewing past/future</div>`}
-        </div>
-        <button class="qnav-btn" onclick="shiftQuarter(1)" title="Next quarter">&#9654;</button>
-        ${!isCurrent ? '<button class="btn btn-sm btn-outline" onclick="resetQuarterToCurrent()" style="margin-left:8px;">Today</button>' : ''}
-      </div>
-      <div class="quarter-stats">
-        <div class="qstat"><b>${thisQOpen.length}</b> open this quarter</div>
-        <div class="qstat green"><b>${thisQDone.length}</b> done</div>
-        <div class="qstat red"><b>${carried.length}</b> carried from ${quarterLabel(prev.year, prev.q).split(' ')[0]} ${prev.year}</div>
-      </div>
-    </div>
-
-    <div class="chart-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 18px;">
-      <div class="card">
-        <div class="card-header">This quarter (${quarterLabel(sel.year, sel.q)})</div>
-        <div class="card-body">${quarterTaskTable(thisQOpen, 'Nothing open this quarter.')}</div>
-      </div>
-      <div class="card">
-        <div class="card-header" style="background:var(--red);">Carried over from ${quarterLabel(prev.year, prev.q).replace(/ \(.*\)$/, '')}</div>
-        <div class="card-body">${quarterTaskTable(carried, 'Nothing left over.')}</div>
-      </div>
     </div>
 
     <div class="kpi-row">
