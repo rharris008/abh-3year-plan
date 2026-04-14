@@ -158,6 +158,26 @@ input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
 #save-indicator.saving { background: var(--blue); color: #fff; }
 #save-indicator.error { background: var(--red); color: #fff; }
 
+/* ══ TEAM DIRECTORY TILES ═══════════════════════════════════════════════ */
+.directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.directory-tile { background: #fff; border: 1px solid var(--mdgrey); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.directory-tile:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.tile-header { display: flex; align-items: flex-start; padding: 8px 10px; background: var(--ltgrey); border-bottom: 1px solid var(--mdgrey); gap: 6px; }
+.tile-name-row { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tile-name-input { flex: 1; min-width: 120px; border: 1px solid transparent; background: transparent; font-weight: bold; font-size: 13px; color: var(--navy); padding: 3px 4px; border-radius: 3px; }
+.tile-name-input:hover { border-color: var(--mdgrey); background: #fff; }
+.tile-name-input:focus { border-color: var(--blue); background: #fff; outline: none; }
+.tier-badge { padding: 2px 6px; border-radius: 8px; color: #fff; font-size: 9px; font-weight: bold; letter-spacing: 0.3px; }
+.tile-archive-btn { background: transparent; border: none; color: #999; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
+.tile-archive-btn:hover { color: var(--red); }
+.tile-body { padding: 10px; }
+.tile-field { margin-bottom: 8px; }
+.tile-field label { display: block; font-size: 10px; font-weight: 600; color: #666; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+.tile-input { width: 100%; box-sizing: border-box; padding: 5px 7px; border: 1px solid var(--mdgrey); border-radius: 3px; font-size: 12px; font-family: inherit; }
+.tile-input:focus { border-color: var(--blue); outline: none; }
+.tile-stats { display: flex; gap: 12px; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--ltgrey); font-size: 11px; color: #666; }
+
+
 /* ══ LAYOUT ══════════════════════════════════════════════════════════════════ */
 #app-body {
   display: flex;
@@ -3044,34 +3064,51 @@ function renderTimeline(main) {
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIG VIEW
 // ══════════════════════════════════════════════════════════════════════════════
-function renderConfig(main) {
+// Directory cache — full records from abh_directory. Populated by loadDirectoryFromSupabase.
+let DIRECTORY = [];
+
+async function loadDirectoryFromSupabase() {
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb
+      .from('abh_directory')
+      .select('*')
+      .eq('active', true)
+      .order('full_name');
+    if (error) { console.warn('directory load failed', error); return []; }
+    DIRECTORY = Array.isArray(data) ? data : [];
+    return DIRECTORY;
+  } catch (e) { console.warn('directory load threw', e); return []; }
+}
+
+const SITES = ['Ann Street','Erskine Park','St Marys','HO','Remote','External','Other'];
+const TIER_COLOURS = { board: '#1B2A4A', finance: '#0E7CCE', management: '#27AE60', staff: '#999', red: '#C0392B', green: '#27AE60', amber: '#E67E22' };
+
+async function renderConfig(main) {
   main.innerHTML = `
-    <div class="view-header"><div class="view-title">Configuration</div></div>
+    <div class="view-header">
+      <div class="view-title">Team &amp; Config</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-sm btn-navy" onclick="addPersonPrompt()">+ Add Person</button>
+        <button class="btn btn-sm btn-outline" onclick="renderConfig(document.getElementById('main'))" title="Reload from cloud">&#8635; Refresh</button>
+      </div>
+    </div>
 
     <div class="card">
-      <div class="card-header">Team Members</div>
-      <div class="card-body">
-        <table class="task-table">
-          <thead><tr><th>Name</th><th>Tasks Assigned</th><th>Overdue</th></tr></thead>
-          <tbody>
-            ${TEAM.map(name => {
-              const cnt = tasks.filter(t => hasAssignee(t, name)).length;
-              const od = tasks.filter(t => hasAssignee(t, name) && isOverdue(t)).length;
-              return `<tr><td>${esc(name)}</td><td>${cnt}</td><td class="${od > 0 ? 'overdue-text' : ''}">${od}</td></tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+      <div class="card-header">Team Directory <span style="font-weight:normal;font-size:10px;opacity:0.8;">(edit in place, saves to cloud on blur)</span></div>
+      <div class="card-body" id="directory-grid">
+        <div style="padding:24px;text-align:center;color:#999;">Loading directory...</div>
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
       <div class="card-header">Import / Export</div>
       <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
-        <button class="btn btn-navy" onclick="exportJSON()">Backup (JSON)</button>
-        <button class="btn btn-navy" onclick="document.getElementById('import-file').click()">Restore (JSON)</button>
+        <button class="btn btn-navy" onclick="exportJSON()">Backup Tasks (JSON)</button>
+        <button class="btn btn-navy" onclick="document.getElementById('import-file').click()">Restore Tasks (JSON)</button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
-        <button class="btn btn-outline" onclick="exportCSV()">Export CSV</button>
-        <button class="btn btn-danger" onclick="resetToSeed()">Reset to Original Data</button>
+        <button class="btn btn-outline" onclick="exportCSV()">Export Tasks (CSV)</button>
+        <button class="btn btn-outline" onclick="resetToSeed()">Reload Tasks from Cloud</button>
       </div>
     </div>
 
@@ -3081,8 +3118,136 @@ function renderConfig(main) {
     </div>
   `;
 
-  // Check Supabase
   checkSupabase();
+  await loadDirectoryFromSupabase();
+  renderDirectoryGrid();
+}
+
+function renderDirectoryGrid() {
+  const grid = document.getElementById('directory-grid');
+  if (!grid) return;
+  if (DIRECTORY.length === 0) {
+    grid.innerHTML = '<div style="padding:24px;text-align:center;color:#999;">No directory records. Click + Add Person to seed the team.</div>';
+    return;
+  }
+  const hasNewCols = DIRECTORY[0] && ('is_external' in DIRECTORY[0] || 'position' in DIRECTORY[0] || 'site' in DIRECTORY[0]);
+  const tiles = DIRECTORY.map(p => {
+    const taskCount = tasks.filter(t => hasAssignee(t, p.full_name)).length;
+    const overdueCount = tasks.filter(t => hasAssignee(t, p.full_name) && isOverdue(t)).length;
+    const tier = p.tier || 'red';
+    const tierColour = TIER_COLOURS[tier] || '#999';
+    const companies = (p.companies || []).join(', ');
+    const externalBadge = p.is_external ? '<span style="background:var(--amber);color:#fff;padding:2px 6px;border-radius:8px;font-size:9px;margin-left:4px;">EXTERNAL</span>' : '';
+    const siteField = hasNewCols ? `
+      <div class="tile-field">
+        <label>Site</label>
+        <select class="tile-input" onchange="saveDirectoryField('${p.id}','site',this.value)">
+          <option value="">—</option>
+          ${SITES.map(s => `<option value="${esc(s)}" ${p.site===s?'selected':''}>${esc(s)}</option>`).join('')}
+        </select>
+      </div>` : '';
+    const positionField = hasNewCols ? `
+      <div class="tile-field">
+        <label>Position / Role</label>
+        <input type="text" class="tile-input" value="${esc(p.position || p.role || '')}" onblur="saveDirectoryField('${p.id}','position',this.value)" placeholder="e.g. Site Manager">
+      </div>` : `
+      <div class="tile-field">
+        <label>Role</label>
+        <input type="text" class="tile-input" value="${esc(p.role || '')}" onblur="saveDirectoryField('${p.id}','role',this.value)" placeholder="e.g. Site Manager">
+      </div>`;
+    return `
+      <div class="directory-tile" data-id="${p.id}">
+        <div class="tile-header">
+          <div class="tile-name-row">
+            <input type="text" class="tile-name-input" value="${esc(p.full_name || '')}" onblur="saveDirectoryField('${p.id}','full_name',this.value)">
+            <span class="tier-badge" style="background:${tierColour};">${esc(tier.toUpperCase())}</span>
+            ${externalBadge}
+          </div>
+          <button class="tile-archive-btn" onclick="archiveDirectoryPerson('${p.id}','${esc(p.full_name).replace(/'/g,'&apos;')}')" title="Archive this person">&times;</button>
+        </div>
+        <div class="tile-body">
+          ${positionField}
+          ${siteField}
+          <div class="tile-field">
+            <label>M&amp;N Email</label>
+            <input type="email" class="tile-input" value="${esc(p.mn_email || '')}" onblur="saveDirectoryField('${p.id}','mn_email',this.value)" placeholder="name@mann-noble.com">
+          </div>
+          <div class="tile-field">
+            <label>NB Email</label>
+            <input type="email" class="tile-input" value="${esc(p.nb_email || '')}" onblur="saveDirectoryField('${p.id}','nb_email',this.value)" placeholder="name@noblebeverages.com">
+          </div>
+          <div class="tile-field">
+            <label>Mobile</label>
+            <input type="tel" class="tile-input" value="${esc(p.mobile || '')}" onblur="saveDirectoryField('${p.id}','mobile',this.value)" placeholder="04xx xxx xxx">
+          </div>
+          <div class="tile-field">
+            <label>Companies</label>
+            <input type="text" class="tile-input" value="${esc(companies)}" onblur="saveDirectoryCompanies('${p.id}',this.value)" placeholder="ABH, M&amp;N, AGD">
+          </div>
+          <div class="tile-stats">
+            <span><b>${taskCount}</b> tasks</span>
+            <span class="${overdueCount > 0 ? 'overdue-text' : ''}"><b>${overdueCount}</b> overdue</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  grid.innerHTML = `<div class="directory-grid">${tiles}</div>`;
+}
+
+async function saveDirectoryField(id, field, value) {
+  if (!sb) { toast('Offline — change not saved to cloud', 'info'); return; }
+  const trimmed = (value || '').trim();
+  const payload = { [field]: trimmed || null };
+  try {
+    const { error } = await sb.from('abh_directory').update(payload).eq('id', id);
+    if (error) {
+      console.error('directory save failed', error);
+      toast(`Save failed: ${error.message || error.code}`, 'error');
+      return;
+    }
+    // Update the in-memory cache
+    const row = DIRECTORY.find(p => String(p.id) === String(id));
+    if (row) row[field] = trimmed || null;
+    // If full_name changed, reload TEAM so task dropdowns pick up the new name
+    if (field === 'full_name') {
+      await loadTeamFromSupabase();
+      populatePersonFilter();
+    }
+    toast(`${field.replace('_',' ')} saved`);
+  } catch (e) {
+    console.error('directory save threw', e);
+    toast('Save failed', 'error');
+  }
+}
+
+async function saveDirectoryCompanies(id, value) {
+  // Parse "ABH, M&N, AGD" → ['ABH','M&N','AGD']
+  const parts = (value || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!sb) { toast('Offline', 'info'); return; }
+  try {
+    const { error } = await sb.from('abh_directory').update({ companies: parts }).eq('id', id);
+    if (error) { toast(`Save failed: ${error.message}`, 'error'); return; }
+    const row = DIRECTORY.find(p => String(p.id) === String(id));
+    if (row) row.companies = parts;
+    // Reload TEAM in case ABH was added/removed (affects dropdown visibility)
+    await loadTeamFromSupabase();
+    populatePersonFilter();
+    toast('Companies saved');
+  } catch (e) { toast('Save failed', 'error'); }
+}
+
+async function archiveDirectoryPerson(id, name) {
+  if (!confirm(`Archive ${name}? They will be hidden from the dropdown but their history stays intact. You can restore later by editing the record in Supabase.`)) return;
+  if (!sb) { toast('Offline', 'info'); return; }
+  try {
+    const { error } = await sb.from('abh_directory').update({ active: false }).eq('id', id);
+    if (error) { toast(`Archive failed: ${error.message}`, 'error'); return; }
+    DIRECTORY = DIRECTORY.filter(p => String(p.id) !== String(id));
+    await loadTeamFromSupabase();
+    populatePersonFilter();
+    renderDirectoryGrid();
+    toast(`${name} archived`);
+  } catch (e) { toast('Archive failed', 'error'); }
 }
 
 async function checkSupabase() {
