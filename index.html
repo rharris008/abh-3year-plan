@@ -1023,8 +1023,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
       <button class="btn btn-sm btn-outline" onclick="addPersonPrompt()" title="Add a person to the team" style="padding:3px 8px;font-size:11px;">+</button>
     </div>
     <div class="countdown" id="countdown"></div>
-    <div id="save-indicator" class="clean" onclick="saveAll()" title="Click to save">SAVED</div>
-    <button class="btn btn-sm btn-primary" onclick="saveAll()">Save</button>
+    <div id="save-indicator" class="clean" onclick="autoSaveToCloud('Saved to cloud')" title="All changes auto-save. Click to re-sync.">SAVED</div>
   </div>
 </header>
 
@@ -1574,18 +1573,68 @@ function toast(msg, type='success') {
 // ══════════════════════════════════════════════════════════════════════════════
 // SAVE INDICATOR
 // ══════════════════════════════════════════════════════════════════════════════
+// Auto-save model: every mutation triggers a cloud save immediately. The
+// indicator reflects the current sync state (SAVED / SAVING / ERROR). There
+// is no UNSAVED state under normal operation; it only appears if the cloud
+// write fails and we need user attention.
 function markDirty() {
   dirty = true;
   const el = document.getElementById('save-indicator');
-  el.className = 'dirty';
-  el.textContent = 'UNSAVED';
+  if (el) { el.className = 'dirty'; el.textContent = 'UNSAVED'; }
 }
 
 function markClean() {
   dirty = false;
   const el = document.getElementById('save-indicator');
-  el.className = 'clean';
-  el.textContent = 'SAVED';
+  if (el) { el.className = 'clean'; el.textContent = 'SAVED'; }
+}
+
+function markSaving() {
+  const el = document.getElementById('save-indicator');
+  if (el) { el.className = 'saving'; el.textContent = 'SAVING'; }
+}
+
+function markError(msg) {
+  dirty = true;
+  const el = document.getElementById('save-indicator');
+  if (el) { el.className = 'error'; el.textContent = 'RETRY'; el.title = msg || 'Save failed — click to retry'; }
+}
+
+// Centralised auto-save entry point. Called after every mutation
+// (task edit, inline status change, delete, recurrence spawn, etc.).
+// Shows a transient toast on success and flips the indicator to ERROR if
+// the cloud write fails, so the user knows to click retry.
+let _autoSaveInFlight = false;
+let _autoSavePending = false;
+async function autoSaveToCloud(successMessage) {
+  if (_autoSaveInFlight) {
+    // Coalesce rapid-fire changes into a single trailing save
+    _autoSavePending = true;
+    return;
+  }
+  _autoSaveInFlight = true;
+  markSaving();
+  try {
+    const ok = await saveToSupabase();
+    if (ok) {
+      markClean();
+      if (successMessage) toast(successMessage);
+    } else {
+      markError('Cloud save failed — local copy is safe, click to retry');
+      toast('Saved locally, cloud sync failed', 'error');
+    }
+  } catch (e) {
+    console.error('autoSaveToCloud exception', e);
+    markError(e && e.message);
+    toast('Saved locally, cloud sync failed', 'error');
+  } finally {
+    _autoSaveInFlight = false;
+    if (_autoSavePending) {
+      _autoSavePending = false;
+      // Trailing save to catch any changes that arrived mid-flight
+      setTimeout(() => autoSaveToCloud(null), 50);
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2555,7 +2604,7 @@ function renderTable(data, container) {
   html += '</tbody></table>';
   container.innerHTML = html;
 
-  // Add inline status change handlers
+  // Add inline status change handlers — auto-save on every change
   container.querySelectorAll('.inline-select').forEach(sel => {
     sel.addEventListener('click', e => e.stopPropagation());
     sel.addEventListener('change', e => {
@@ -2564,8 +2613,9 @@ function renderTable(data, container) {
       const task = tasks.find(t => t.id === tid);
       if (task) {
         task.status = sel.value;
-        markDirty();
+        saveToLocal();
         renderView();
+        autoSaveToCloud('Status updated');
       }
     });
   });
@@ -3298,11 +3348,12 @@ function saveTask() {
     tasks.push(data);
   }
 
-  markDirty();
   saveToLocal();
   closeModal();
   renderView();
-  toast(regenerated ? 'Task completed + next recurrence created' : (id ? 'Task updated' : 'Task created'));
+  // Auto-save to cloud immediately — no UNSAVED state. Matches the Maintenance
+  // and Production Planner pattern where every action hits Supabase on commit.
+  autoSaveToCloud(regenerated ? 'Task completed + next recurrence created' : (id ? 'Task updated' : 'Task created'));
 }
 
 // Given a recurring task that was just completed, return a clone with a new id
@@ -3342,11 +3393,10 @@ function deleteTask() {
   if (!id) return;
   if (!confirm('Delete this task permanently?')) return;
   tasks = tasks.filter(t => t.id !== id);
-  markDirty();
   saveToLocal();
   closeModal();
   renderView();
-  toast('Task deleted');
+  autoSaveToCloud('Task deleted');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
