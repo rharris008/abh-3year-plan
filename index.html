@@ -177,6 +177,17 @@ input, select, textarea { font-family: Arial, sans-serif; font-size: 13px; }
 .tile-input:focus { border-color: var(--blue); outline: none; }
 .tile-stats { display: flex; gap: 12px; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--ltgrey); font-size: 11px; color: #666; }
 
+/* ══ TEAMS TILES ════════════════════════════════════════════════════════ */
+.team-tile { background: #fff; border: 1px solid var(--mdgrey); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.team-tile.system-team { background: var(--ltgrey); }
+.team-label { font-weight: bold; font-size: 13px; color: var(--navy); }
+.team-members { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.team-chip { display: inline-block; padding: 2px 8px; background: var(--navy); color: #fff; border-radius: 10px; font-size: 10px; font-weight: 500; }
+.team-chip.all-chip { background: var(--green); }
+.team-chip.creator-chip { background: var(--amber); }
+.team-spaces { font-size: 10px; color: #666; font-style: italic; }
+.team-actions { display: flex; gap: 6px; }
+
 
 /* ══ LAYOUT ══════════════════════════════════════════════════════════════════ */
 #app-body {
@@ -1393,6 +1404,45 @@ function loadTeamsFromLocal() {
     if (parsed.labels)  TEAM_LABELS  = parsed.labels;
   } catch (e) { console.warn('teams load failed', e); }
 }
+
+// Hydrate TEAMS from abh_planner_teams if the table exists. Falls back to the
+// hardcoded object above if the table hasn't been created yet.
+async function loadTeamsFromSupabase() {
+  if (!sb) return false;
+  try {
+    const { data, error } = await sb
+      .from('abh_planner_teams')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order');
+    if (error) {
+      if (error.code === '42P01' || (error.message || '').includes('does not exist')) {
+        console.info('abh_planner_teams not found yet — using hardcoded TEAMS fallback. Run abh_planner_teams_create.sql to enable cloud-backed teams.');
+      } else {
+        console.warn('teams cloud load failed', error);
+      }
+      return false;
+    }
+    if (!Array.isArray(data) || data.length === 0) return false;
+    const next = {};
+    data.forEach(row => {
+      let members;
+      if (row.members && row.members.length === 1 && row.members[0] === '*all*') members = 'all';
+      else if (row.members && row.members.length === 1 && row.members[0] === '*creator*') members = 'creator';
+      else members = row.members || [];
+      next[row.id] = {
+        label: row.label,
+        members,
+        spaces: row.spaces || [],
+        system: row.system_team === true,
+      };
+    });
+    TEAMS = next;
+    rebuildTeamCompatShims();
+    applyTeamLabelsToSidebar();
+    return true;
+  } catch (e) { console.warn('teams cloud load threw', e); return false; }
+}
 function saveTeamsToLocal() {
   localStorage.setItem('abh3y_teams', JSON.stringify({
     members: TEAM_MEMBERS,
@@ -1861,6 +1911,7 @@ async function initData() {
   loadTeamFromLocal();
   await loadTeamFromSupabase();
   loadTeamsFromLocal();
+  await loadTeamsFromSupabase();
   applyTeamLabelsToSidebar();
   // Try Supabase first, then localStorage, then seed data
   let data = await loadFromSupabase();
@@ -3102,6 +3153,16 @@ async function renderConfig(main) {
     </div>
 
     <div class="card" style="margin-top:16px;">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Teams</span>
+        <button class="btn btn-sm btn-navy" onclick="newTeamPrompt()" style="font-size:11px;">+ New Team</button>
+      </div>
+      <div class="card-body" id="teams-grid">
+        <div style="padding:24px;text-align:center;color:#999;">Loading teams...</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
       <div class="card-header">Import / Export</div>
       <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
         <button class="btn btn-navy" onclick="exportJSON()">Backup Tasks (JSON)</button>
@@ -3121,6 +3182,142 @@ async function renderConfig(main) {
   checkSupabase();
   await loadDirectoryFromSupabase();
   renderDirectoryGrid();
+  renderTeamsGrid();
+}
+
+function renderTeamsGrid() {
+  const grid = document.getElementById('teams-grid');
+  if (!grid) return;
+  const teamEntries = Object.entries(TEAMS);
+  if (teamEntries.length === 0) {
+    grid.innerHTML = '<div style="padding:16px;text-align:center;color:#999;">No teams yet. Click + New Team.</div>';
+    return;
+  }
+  const tiles = teamEntries.map(([key, team]) => {
+    const isSystem = team.system === true || ['strategic','personal'].includes(key);
+    const members = team.members;
+    let memberChips = '';
+    if (members === 'all') memberChips = '<span class="team-chip all-chip">Everyone</span>';
+    else if (members === 'creator') memberChips = '<span class="team-chip creator-chip">Task creator only</span>';
+    else memberChips = (members || []).map(m => `<span class="team-chip">${esc(m)}</span>`).join('');
+    const spaceLine = (team.spaces || []).length > 0 ? `<div class="team-spaces">Spaces: ${(team.spaces||[]).map(s => esc(s)).join(', ')}</div>` : '';
+    const deleteBtn = isSystem ? '' : `<button class="tile-archive-btn" onclick="deleteTeam('${esc(key).replace(/'/g,"&apos;")}','${esc(team.label).replace(/'/g,"&apos;")}')" title="Delete this team">&times;</button>`;
+    const editBtn = isSystem ? '' : `<button class="btn btn-sm btn-outline" style="font-size:10px;padding:3px 8px;" onclick="editTeamPrompt('${esc(key).replace(/'/g,"&apos;")}')">Edit members</button>`;
+    return `
+      <div class="team-tile ${isSystem ? 'system-team' : ''}">
+        <div class="tile-header">
+          <div class="tile-name-row">
+            <span class="team-label">${esc(team.label)}</span>
+            ${isSystem ? '<span class="tier-badge" style="background:#999;">SYSTEM</span>' : ''}
+          </div>
+          ${deleteBtn}
+        </div>
+        <div class="tile-body">
+          <div class="team-members">${memberChips}</div>
+          ${spaceLine}
+          <div class="team-actions" style="margin-top:8px;">${editBtn}</div>
+        </div>
+      </div>`;
+  }).join('');
+  grid.innerHTML = `<div class="directory-grid">${tiles}</div>`;
+}
+
+async function newTeamPrompt() {
+  const label = prompt('New team name (e.g. "Marketing"):');
+  if (!label || !label.trim()) return;
+  const cleanLabel = label.trim();
+  const id = cleanLabel.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  if (!id) { toast('Invalid team name', 'error'); return; }
+  if (TEAMS[id]) { toast('A team with that name already exists', 'info'); return; }
+  // Ask for members via checkbox list
+  const pickedMembers = await pickMembersForTeam(cleanLabel, []);
+  if (!pickedMembers) return;  // cancelled
+  const row = {
+    id,
+    label: cleanLabel,
+    members: pickedMembers,
+    spaces: [],
+    system_team: false,
+    sort_order: 100 + Object.keys(TEAMS).length,
+    active: true,
+  };
+  if (sb) {
+    const { error } = await sb.from('abh_planner_teams').insert(row);
+    if (error) {
+      if (error.code === '42P01') {
+        toast('abh_planner_teams table not found. Paste abh_planner_teams_create.sql in Supabase SQL editor first.', 'error');
+      } else {
+        toast(`Create team failed: ${error.message}`, 'error');
+      }
+      return;
+    }
+  }
+  TEAMS[id] = { label: cleanLabel, members: pickedMembers, spaces: [], system: false };
+  rebuildTeamCompatShims();
+  renderTeamsGrid();
+  toast(`Team "${cleanLabel}" created`);
+}
+
+async function editTeamPrompt(id) {
+  const team = TEAMS[id];
+  if (!team) return;
+  const current = Array.isArray(team.members) ? team.members : [];
+  const pickedMembers = await pickMembersForTeam(team.label, current);
+  if (!pickedMembers) return;
+  if (sb) {
+    const { error } = await sb.from('abh_planner_teams').update({ members: pickedMembers }).eq('id', id);
+    if (error) { toast(`Update failed: ${error.message}`, 'error'); return; }
+  }
+  TEAMS[id].members = pickedMembers;
+  rebuildTeamCompatShims();
+  renderTeamsGrid();
+  toast(`${team.label} members updated`);
+}
+
+async function deleteTeam(id, label) {
+  if (!confirm(`Delete the "${label}" team? Tasks in its spaces will no longer be restricted to team members.`)) return;
+  if (sb) {
+    const { error } = await sb.from('abh_planner_teams').delete().eq('id', id);
+    if (error) { toast(`Delete failed: ${error.message}`, 'error'); return; }
+  }
+  delete TEAMS[id];
+  rebuildTeamCompatShims();
+  renderTeamsGrid();
+  toast(`Team "${label}" deleted`);
+}
+
+// Simple modal-less member picker using a temporary overlay
+function pickMembersForTeam(teamLabel, preSelected) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay open';
+    const items = TEAM.map(n => `<label style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;">
+      <input type="checkbox" value="${esc(n)}" ${preSelected.includes(n) ? 'checked' : ''}> ${esc(n)}
+    </label>`).join('');
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:400px;">
+        <div class="modal-header">
+          <span>Members for "${esc(teamLabel)}"</span>
+          <button class="close-btn" id="picker-cancel">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height:400px;overflow-y:auto;">
+          ${items}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" id="picker-cancel-btn">Cancel</button>
+          <button class="btn btn-success" id="picker-save">Save</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const cleanup = () => document.body.removeChild(overlay);
+    overlay.querySelector('#picker-cancel').onclick = () => { cleanup(); resolve(null); };
+    overlay.querySelector('#picker-cancel-btn').onclick = () => { cleanup(); resolve(null); };
+    overlay.querySelector('#picker-save').onclick = () => {
+      const picked = Array.from(overlay.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      cleanup();
+      resolve(picked);
+    };
+  });
 }
 
 function renderDirectoryGrid() {
