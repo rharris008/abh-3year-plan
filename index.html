@@ -1937,6 +1937,20 @@ async function initData() {
   populatePersonFilter();
   await loadRevenueData();
   updateRevenueChip();
+  // Deep-link support: if URL has ?pillar=X, pre-filter the All Tasks view
+  // so the Morning Dashboard tiles (and any other external link) can route
+  // straight to a filtered list.
+  try {
+    const qp = new URLSearchParams(window.location.search);
+    const pillarParam = qp.get('pillar');
+    if (pillarParam) {
+      currentView = 'tasklist';
+      _pillarPrefilter = pillarParam;
+      document.querySelectorAll('#sidebar .nav-item').forEach(i => i.classList.remove('active'));
+      const item = document.querySelector('#sidebar .nav-item[data-view="tasklist"]');
+      if (item) item.classList.add('active');
+    }
+  } catch (e) { console.warn('pillar deep-link failed', e); }
   renderView();
 }
 
