@@ -1405,8 +1405,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
       <label>Pillar</label>
       <select id="modal-pillar"></select>
 
-      <label>Space</label>
-      <select id="modal-space"></select>
+      <select id="modal-space" style="display:none"></select>
 
       <div style="display:flex;gap:12px;">
         <div style="flex:1">
@@ -1723,14 +1722,34 @@ function rebuildTeamCompatShims() {
 rebuildTeamCompatShims();
 
 function getTeamKeyForTask(t) {
-  if (!t || !t.space) return null;
+  const acct = getAccountable(t);
+  const resp = getResponsible(t);
+  // Primary: find team where Accountable is a member
   for (const [key, team] of Object.entries(TEAMS)) {
-    if ((team.spaces || []).includes(t.space)) return key;
+    if (key === 'strategic') continue;
+    if (Array.isArray(team.members)) {
+      if (acct && team.members.includes(acct)) return key;
+    }
+  }
+  // Fallback: find team where Responsible is a member
+  for (const [key, team] of Object.entries(TEAMS)) {
+    if (key === 'strategic') continue;
+    if (Array.isArray(team.members)) {
+      if (resp && team.members.includes(resp)) return key;
+    }
   }
   return null;
 }
 
 function canViewTask(t, viewerName) {
+  // A task is visible to viewerName if:
+  //   (a) they are the Accountable or Responsible person on the task, OR
+  //   (b) they belong to the same team as the A or R person
+  // Strategic tasks (all-members team) are always visible.
+  const acct = getAccountable(t);
+  const resp = getResponsible(t);
+
+  // Find which team "owns" this task (via A then R)
   const key = getTeamKeyForTask(t);
   if (!key) return true;  // unclassified tasks are visible (safe default)
   const team = TEAMS[key];
@@ -1741,7 +1760,11 @@ function canViewTask(t, viewerName) {
     return (t.createdBy || '').toLowerCase() === viewerName.toLowerCase();
   }
   if (!viewerName) return false;  // no Viewing-as set: restricted team tasks hidden
-  return team.members.some(m => m.toLowerCase() === viewerName.toLowerCase());
+  // Viewer can see if they ARE the A or R, or if they are in the owning team
+  const vl = viewerName.toLowerCase();
+  if (acct && acct.toLowerCase() === vl) return true;
+  if (resp && resp.toLowerCase() === vl) return true;
+  return team.members.some(m => m.toLowerCase() === vl);
 }
 
 // Returns the global tasks list filtered to what the current viewer can see.
@@ -1899,7 +1922,8 @@ const PILLAR_COLOURS = {
 const STRATEGIC_SPACES = new Set(['ABH 3 Year $150m turnover goal']);
 function getTrackType(t) {
   if (t && t.trackType) return t.trackType;
-  if (t && STRATEGIC_SPACES.has(t.space || '')) return 'strategic';
+  // Strategic tasks have a pillar assigned (space field is defunct ClickUp carry-over)
+  if (t && t.pillar !== null && t.pillar !== undefined && t.pillar !== '') return 'strategic';
   return 'todo';
 }
 function isStrategic(t) { return getTrackType(t) === 'strategic'; }
@@ -1910,7 +1934,7 @@ function strategicTasks() { return tasks.filter(isStrategic); }
 // JS-side keyword classifier — safety net for any task missing a pillar.
 function classifyPillar(t) {
   const haystack = [
-    t.name || '', t.content || '', t.folder || '', t.space || ''
+    t.name || '', t.content || '', t.folder || ''
   ].join(' ').toLowerCase();
   const has = (kws) => kws.some(k => haystack.includes(k));
   if (has(['safety', 'ppe', 'incident', 'near miss', 'hazard'])) return 'Safety Culture';
@@ -2468,15 +2492,18 @@ function renderView() {
       case 'workload': renderWorkload(main); break;
       case 'gsd':
         if (!teamHasAccess('gsd')) { renderTeamBlocked(main, 'gsd'); break; }
-        renderFilteredList(main, 'Rob & Richard', t => t.space === 'Getting Shit done');
+        renderFilteredList(main, 'Rob & Richard', t => {
+          const a = getAccountable(t), r = getResponsible(t);
+          return ['Robert Harris', 'Richard Carlick'].includes(a) || ['Robert Harris', 'Richard Carlick'].includes(r);
+        });
         break;
       case 'finance':
         if (!teamHasAccess('finance')) { renderTeamBlocked(main, 'finance'); break; }
-        renderFilteredList(main, 'Finance Tasks', t =>
-          t.space === 'Finance Task reallocations'
-          || t.space === 'Finance Team ongoing efficiency'
-          || t.space === 'Month end reminders'
-        );
+        renderFilteredList(main, 'Finance Tasks', t => {
+          const a = getAccountable(t), r = getResponsible(t);
+          const finMembers = ['Lisa Fontanot', 'Sharon Salt', 'Issareeya Yeeka', 'Robert Harris'];
+          return finMembers.includes(a) || finMembers.includes(r);
+        });
         break;
       case 'tasklist': renderTaskList(main); break;
       case 'timeline': renderTimeline(main); break;
@@ -2485,7 +2512,11 @@ function renderView() {
         if (currentView && TEAMS[currentView]) {
           const dynTeam = TEAMS[currentView];
           if (!teamHasAccess(currentView)) { renderTeamBlocked(main, currentView); break; }
-          renderFilteredList(main, dynTeam.label, t => (dynTeam.spaces || []).includes(t.space));
+          renderFilteredList(main, dynTeam.label, t => {
+            if (!Array.isArray(dynTeam.members)) return false;
+            const a = getAccountable(t), r = getResponsible(t);
+            return (a && dynTeam.members.includes(a)) || (r && dynTeam.members.includes(r));
+          });
         }
         break;
     }
@@ -3986,8 +4017,11 @@ function openModal(taskId) {
   const pillarSelect = document.getElementById('modal-pillar');
   pillarSelect.innerHTML = '<option value="">(unassigned)</option>' + PILLARS.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
 
+  // Space field is defunct (ClickUp carry-over) — kept hidden in DOM for Supabase mapping only
   const spaceSelect = document.getElementById('modal-space');
-  spaceSelect.innerHTML = SPACES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if (spaceSelect && typeof SPACES !== 'undefined') {
+    spaceSelect.innerHTML = SPACES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  }
 
   // Populate Responsible / Accountable single-select dropdowns
   const respSelect = document.getElementById('modal-responsible');
