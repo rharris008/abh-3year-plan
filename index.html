@@ -3193,14 +3193,31 @@ function sortTable(col) {
 // FILTERED LIST VIEW (reusable)
 // ══════════════════════════════════════════════════════════════════════════════
 function renderFilteredList(main, title, filterFn) {
-  const filtered = tasks.filter(filterFn);
+  // Default: open tasks only. "Show completed" checkbox reveals completed tasks.
   main.innerHTML = `
     <div class="view-header">
       <div class="view-title">${esc(title)}</div>
-      <div style="font-size:13px;color:#666;">${filtered.length} tasks</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="fl-count" style="font-size:13px;color:#666;"></span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap;color:#555;">
+          <input type="checkbox" id="fl-show-completed" onchange="applyFilteredListToggle()"> Show completed
+        </label>
+      </div>
     </div>
     <div id="filtered-table-container"></div>
   `;
+  // Store base filter so the checkbox handler can re-apply it
+  window._flFilterFn = filterFn;
+  applyFilteredListToggle();
+}
+
+function applyFilteredListToggle() {
+  const showCompleted = document.getElementById('fl-show-completed')?.checked || false;
+  const fn = window._flFilterFn;
+  if (!fn) return;
+  const filtered = tasks.filter(t => fn(t) && (showCompleted || t.status !== 'complete'));
+  const countEl = document.getElementById('fl-count');
+  if (countEl) countEl.textContent = `${filtered.length} task${filtered.length !== 1 ? 's' : ''}`;
   renderTable(filtered, document.getElementById('filtered-table-container'));
 }
 
