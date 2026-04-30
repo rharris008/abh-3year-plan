@@ -2372,7 +2372,10 @@ async function initData() {
 // ══════════════════════════════════════════════════════════════════════════════
 // PERSON FILTER (header dropdown — "Viewing as" lens applied across views)
 // ══════════════════════════════════════════════════════════════════════════════
-let _personFilter = '';
+// Default to Robert Harris so My Tasks loads immediately without needing
+// the user to manually select a name from the dropdown. "All" remains
+// available as a dropdown option.
+let _personFilter = 'Robert Harris';
 const _allTasksRef = { ref: null };
 
 function populatePersonFilter() {
