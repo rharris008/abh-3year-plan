@@ -1796,6 +1796,7 @@ async function loadTeamsFromSupabase() {
     TEAMS = next;
     rebuildTeamCompatShims();
     applyTeamLabelsToSidebar();
+    renderTeamsSidebar();
     return true;
   } catch (e) { console.warn('teams cloud load threw', e); return false; }
 }
@@ -1809,6 +1810,42 @@ function applyTeamLabelsToSidebar() {
   Object.entries(TEAM_LABELS).forEach(([key, label]) => {
     const el = document.querySelector(`#sidebar .nav-item[data-view="${key}"]`);
     if (el) el.textContent = label;
+  });
+}
+
+function renderTeamsSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  // Find the Teams section label in the sidebar
+  const sectionLabels = Array.from(sidebar.querySelectorAll('.section-label'));
+  const teamsLabel = sectionLabels.find(l => l.textContent.trim() === 'Teams');
+  if (!teamsLabel) return;
+  // The "All" section label immediately follows — use it as the insertion boundary
+  const allLabel = sectionLabels[sectionLabels.indexOf(teamsLabel) + 1] || null;
+  // Remove all existing nav items between the Teams and All section labels
+  let el = teamsLabel.nextElementSibling;
+  while (el && el !== allLabel) {
+    const next = el.nextElementSibling;
+    if (el.classList.contains('nav-item')) el.remove();
+    el = next;
+  }
+  // Re-insert one nav item per non-system team
+  Object.entries(TEAMS).forEach(([key, team]) => {
+    const isSystem = team.system === true || ['strategic', 'personal'].includes(key);
+    if (isSystem) return;
+    const div = document.createElement('div');
+    div.className = 'nav-item' + (currentView === key ? ' active' : '');
+    div.dataset.view = key;
+    div.textContent = team.label;
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('#sidebar .nav-item').forEach(i => i.classList.remove('active'));
+      div.classList.add('active');
+      currentView = key;
+      sortCol = null;
+      renderView();
+    });
+    sidebar.insertBefore(div, allLabel);
   });
 }
 
@@ -2445,6 +2482,13 @@ function renderView() {
       case 'tasklist': renderTaskList(main); break;
       case 'timeline': renderTimeline(main); break;
       case 'config': renderConfig(main); break;
+      default:
+        if (currentView && TEAMS[currentView]) {
+          const dynTeam = TEAMS[currentView];
+          if (!teamHasAccess(currentView)) { renderTeamBlocked(main, currentView); break; }
+          renderFilteredList(main, dynTeam.label, t => (dynTeam.spaces || []).includes(t.space));
+        }
+        break;
     }
   } finally {
     restoreAllTasks();
@@ -3624,6 +3668,7 @@ async function newTeamPrompt() {
   TEAMS[id] = { label: cleanLabel, members: pickedMembers, spaces: [], system: false };
   rebuildTeamCompatShims();
   renderTeamsGrid();
+  renderTeamsSidebar();
   toast(`Team "${cleanLabel}" created`);
 }
 
@@ -3652,6 +3697,7 @@ async function deleteTeam(id, label) {
   delete TEAMS[id];
   rebuildTeamCompatShims();
   renderTeamsGrid();
+  renderTeamsSidebar();
   toast(`Team "${label}" deleted`);
 }
 
