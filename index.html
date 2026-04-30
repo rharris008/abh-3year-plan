@@ -1574,7 +1574,7 @@ function renderShedMilestones() {
       ? ` <span style="color:#E67E22;font-size:10px;">(was ${fmtMilestoneDate(origDue)})</span>`
       : '';
 
-    return `<tr class="ms-row" onclick="window.open('${SHED_URL}','_blank')" title="Open Shed Move Tracker">
+    return `<tr class="ms-row" onclick="window.open('${SHED_URL}#milestone-${m.id}','_blank')" title="Open milestone in Shed Move Tracker">
       <td>${esc(m.description)}</td>
       <td><span class="ms-status-badge" style="background:${badgeBg};color:${badgeColor};">${badgeText}</span></td>
       <td>${fmtMilestoneDate(due)}${dateDiff}</td>
