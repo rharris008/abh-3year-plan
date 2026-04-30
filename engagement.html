@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Assistant Engagement Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f2f5; color: #333; padding: 24px; }
+  h1 { font-size: 22px; font-weight: bold; color: #1B2A4A; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+  h2 { font-size: 14px; font-weight: bold; color: #1B2A4A; margin: 28px 0 12px; border-bottom: 2px solid #1B2A4A; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .card { background: #fff; border-radius: 6px; padding: 16px; border-left: 5px solid #ccc; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .card.green { border-left-color: #27AE60; }
+  .card.amber { border-left-color: #E67E22; }
+  .card-name { font-size: 14px; font-weight: bold; color: #1B2A4A; margin-bottom: 2px; }
+  .card-role { font-size: 11px; color: #888; margin-bottom: 10px; }
+  .stat-row { display: flex; gap: 12px; margin-bottom: 10px; }
+  .stat { text-align: center; flex: 1; background: #f8f9fa; border-radius: 4px; padding: 6px 4px; }
+  .stat-num { font-size: 20px; font-weight: bold; color: #1B2A4A; line-height: 1; }
+  .stat-lbl { font-size: 9px; color: #888; text-transform: uppercase; margin-top: 2px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
+  .badge-green { background: #d5f5e3; color: #1e8449; }
+  .badge-amber { background: #fdebd0; color: #a04000; }
+  .badge-red   { background: #fadbd8; color: #a93226; }
+  .topics { font-size: 11px; color: #555; }
+  .topic-item { border-top: 1px solid #f4f4f4; padding: 3px 0; }
+  .last-seen { font-size: 10px; color: #aaa; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; font-size: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  th { background: #1B2A4A; color: #fff; padding: 9px 12px; text-align: left; font-size: 11px; }
+  td { padding: 9px 12px; border-bottom: 1px solid #f4f4f4; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+  .flag { color: #C0392B; font-weight: bold; font-size: 11px; }
+  .summary-bar { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+  .sum-tile { background: #1B2A4A; color: #fff; border-radius: 6px; padding: 14px 20px; text-align: center; min-width: 130px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .sum-tile.g { background: #27AE60; }
+  .sum-tile.a { background: #E67E22; }
+  .sum-tile.r { background: #C0392B; }
+  .sum-num { font-size: 30px; font-weight: bold; }
+  .sum-lbl { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+  .note { font-size: 11px; color: #888; margin-bottom: 10px; font-style: italic; }
+  footer { margin-top: 28px; font-size: 10px; color: #aaa; border-top: 1px solid #ddd; padding-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>AI Assistant — Staff Engagement Tracker</h1>
+<p class="subtitle">Generated 01/05/2026 | Who is using it, who is not, and what is being built | For Rob's team conversation</p>
+
+<div class="summary-bar">
+  <div class="sum-tile g"><div class="sum-num">4</div><div class="sum-lbl">Active users</div></div>
+  <div class="sum-tile a"><div class="sum-num">8</div><div class="sum-lbl">Enrolled, not engaging</div></div>
+  <div class="sum-tile"><div class="sum-num">32</div><div class="sum-lbl">Emails handled (since 10 Apr)</div></div>
+  <div class="sum-tile"><div class="sum-num">14</div><div class="sum-lbl">Active projects</div></div>
+  <div class="sum-tile"><div class="sum-num">773</div><div class="sum-lbl">Total AI sessions run</div></div>
+</div>
+
+<!-- ACTIVE USERS -->
+<h2>Active — Using It</h2>
+<div class="grid">
+
+  <div class="card green">
+    <div class="card-name">Richard Carlick</div>
+    <div class="card-role">GM Noble Beverages &bull; Erskine Park</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num">17</div><div class="stat-lbl">Emails in</div></div>
+      <div class="stat"><div class="stat-num">7</div><div class="stat-lbl">Topics</div></div>
+    </div>
+    <span class="badge badge-green">HIGH ENGAGEMENT</span>
+    <div class="topics">
+      <div class="topic-item">Coles Daily Dashboard</div>
+      <div class="topic-item">Production planner and order plans</div>
+      <div class="topic-item">600ml pricing analysis</div>
+      <div class="topic-item">Nobles order plan</div>
+      <div class="topic-item">Shed Move brief (weekly)</div>
+    </div>
+    <div class="last-seen">Last email: 30/04/2026</div>
+  </div>
+
+  <div class="card green">
+    <div class="card-name">Sharon Salt</div>
+    <div class="card-role">Supply Chain, Mann &amp; Noble &bull; Erskine Park</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num">8</div><div class="stat-lbl">Emails in</div></div>
+      <div class="stat"><div class="stat-num">5</div><div class="stat-lbl">Topics</div></div>
+    </div>
+    <span class="badge badge-green">HIGH ENGAGEMENT</span>
+    <div class="topics">
+      <div class="topic-item">AGD Supply Chain Planner</div>
+      <div class="topic-item">Oatly PO status and landed costs</div>
+      <div class="topic-item">Amazon reconciliation</div>
+      <div class="topic-item">GRNI PO audit</div>
+      <div class="topic-item">AGD Landed Cost check (weekly automated)</div>
+    </div>
+    <div class="last-seen">Last email: 30/04/2026</div>
+  </div>
+
+  <div class="card amber">
+    <div class="card-name">Maral Movsessian</div>
+    <div class="card-role">Marketing, Noble Beverages &bull; Erskine Park</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num">4</div><div class="stat-lbl">Emails in</div></div>
+      <div class="stat"><div class="stat-num">1</div><div class="stat-lbl">Topics</div></div>
+    </div>
+    <span class="badge badge-amber">LIGHT USE</span>
+    <div class="topics">
+      <div class="topic-item">Meta Ads API credentials (all 4 emails, same topic)</div>
+      <div class="topic-item">Credentials still outstanding</div>
+    </div>
+    <div class="last-seen">Last email: 28/04/2026</div>
+  </div>
+
+  <div class="card amber">
+    <div class="card-name">Kshitij Singh</div>
+    <div class="card-role">Digital/Marketing, Mann &amp; Noble</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num">3</div><div class="stat-lbl">Emails in</div></div>
+      <div class="stat"><div class="stat-num">3</div><div class="stat-lbl">Topics</div></div>
+    </div>
+    <span class="badge badge-amber">LIGHT USE</span>
+    <div class="topics">
+      <div class="topic-item">Amazon Ads API credentials</div>
+      <div class="topic-item">Amazon/Meta API chaser responses</div>
+      <div class="topic-item">Weekly finance journal chaser</div>
+    </div>
+    <div class="last-seen">Last email: 30/04/2026</div>
+  </div>
+
+</div>
+
+<!-- ENROLLED BUT NOT ENGAGING -->
+<h2>Enrolled — Not Engaging</h2>
+<p class="note">These people have been introduced and/or receive scheduled outputs from the assistant. Zero inbound emails or task requests from any of them.</p>
+
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Role / Site</th>
+    <th>What They Receive</th>
+    <th>Emails Sent to Us</th>
+    <th>Notes for Conversation</th>
+  </tr>
+  <tr>
+    <td><strong>Aaron Mattin</strong></td>
+    <td>ABH Operational Leader<br>Erskine Park</td>
+    <td>Shed Move brief (Wed/Fri)</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td class="flag">Rob flagged — expected engagement given his role</td>
+  </tr>
+  <tr>
+    <td><strong>Lisa Fontanot</strong></td>
+    <td>Finance<br>Erskine Park</td>
+    <td>Weekly assistant offer nudge</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td>Enrolled since 10/04. 4 nudges sent. No response.</td>
+  </tr>
+  <tr>
+    <td><strong>Jeremy Wheeler</strong></td>
+    <td>ABH Operational Leader<br>St Marys / Anne Street</td>
+    <td>Shed Move brief (Wed/Fri)</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td>Receives brief but never replied or sent a request</td>
+  </tr>
+  <tr>
+    <td><strong>Ravin Singh (Ravi)</strong></td>
+    <td>Factory Move Lead, Maintenance<br>Erskine Park</td>
+    <td>Shed Move brief (Wed/Fri)</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td>Key shed move stakeholder. No engagement.</td>
+  </tr>
+  <tr>
+    <td><strong>Jasmine Pereira</strong></td>
+    <td>Head of QA<br>Noble Beverages</td>
+    <td>Shed Move brief (Wed/Fri)</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td>Receives brief. No requests sent.</td>
+  </tr>
+  <tr>
+    <td><strong>Issareeya Yeeka (Ploy)</strong></td>
+    <td>Finance / AR / Merchandising<br>Remote</td>
+    <td>Nothing yet</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td>Finance tier. No introduction sent. Opportunity.</td>
+  </tr>
+  <tr>
+    <td><strong>Caine Bowers</strong></td>
+    <td>M&amp;N IOS<br>Erskine Park</td>
+    <td>Shed Move brief (CC only)</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td>CC on shed move. No direct engagement.</td>
+  </tr>
+  <tr>
+    <td><strong>Kane Williams</strong></td>
+    <td>Warehouse, M&amp;N IOS</td>
+    <td>Nothing yet</td>
+    <td style="color:#C0392B; font-weight:bold; text-align:center;">0</td>
+    <td>Staff tier. No introduction.</td>
+  </tr>
+</table>
+
+<!-- ACTIVE PROJECTS -->
+<h2>Active Projects — What Is Being Built</h2>
+<table>
+  <tr>
+    <th>Project</th>
+    <th>Serves</th>
+    <th>Type</th>
+    <th>Status</th>
+  </tr>
+  <tr><td><strong>Shed Move Tracker</strong></td><td>Rob, Jeremy, Richard, Aaron, Ravi, Jasmine, Caine</td><td>Live web app + briefing emails</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>CMMS / Maintenance Planner</strong></td><td>Rob, Noble Beverages ops</td><td>Live web app</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>Production Planner</strong></td><td>Rob, Richard</td><td>Web app + NetSuite sync (hourly)</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>3-Year Plan</strong></td><td>Rob, board</td><td>Live web app</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>HMPS Daily Report</strong></td><td>Rob</td><td>Automated email 5am daily</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>HMPS Weekly Summary</strong></td><td>Phil (M&amp;N)</td><td>Automated email Monday 6am</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>Morning Dashboard</strong></td><td>Rob</td><td>Automated HTML briefing 5:30am</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>AGD Landed Cost Check</strong></td><td>Sharon, Rob</td><td>Automated email Friday</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>Oatly Daily Alert</strong></td><td>Sharon, Rob</td><td>Automated alert Mon-Fri</td><td><span class="badge badge-green">LIVE</span></td></tr>
+  <tr><td><strong>Coles Daily Dashboard</strong></td><td>Richard</td><td>Automated report email</td><td><span class="badge badge-amber">SIGN-OFF PENDING</span></td></tr>
+  <tr><td><strong>AGD Oatly Supply Chain Planner</strong></td><td>Sharon</td><td>Web app + NetSuite sync</td><td><span class="badge badge-amber">SIGN-OFF PENDING</span></td></tr>
+  <tr><td><strong>Management Pack Automation</strong></td><td>Rob, board</td><td>Monthly Excel from NetSuite</td><td><span class="badge badge-amber">IN PROGRESS</span></td></tr>
+  <tr><td><strong>Amazon/Meta Ads Integration</strong></td><td>Kshitij, Maral</td><td>API integration, credentials outstanding</td><td><span class="badge badge-red">BLOCKED</span></td></tr>
+  <tr><td><strong>Hospitality Products (Shopify)</strong></td><td>Rob</td><td>Descriptions, competitor pricing</td><td><span class="badge badge-amber">ONGOING</span></td></tr>
+</table>
+
+<footer>
+  AI Assistant Engagement Tracker | Generated 01/05/2026 | Source: email thread logs (85 threads), Supabase abh_directory (21 staff), contacts.json | INTERNAL - NOT FOR DISTRIBUTION
+</footer>
+
+</body>
+</html>
