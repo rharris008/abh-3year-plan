@@ -1125,6 +1125,102 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 .rag-label.rag-amber { color: var(--amber); }
 .rag-label.rag-green { color: var(--green); }
 
+/* ══ PROJECT SUB-DATABASE REGISTRY ══════════════════════════════════════════ */
+.subdb-section-label {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin-bottom: 8px;
+}
+.subdb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.subdb-row {
+  background: var(--white);
+  border-radius: 8px;
+  border: 1px solid #E0E4EC;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.subdb-row[role="link"]:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+.subdb-row-left {
+  flex: 1;
+  min-width: 0;
+}
+.subdb-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+.subdb-desc {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.4;
+}
+.subdb-row-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.subdb-status-badge {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.subdb-link-btn {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--navy);
+  background: #EEF2F8;
+  border: 1px solid #C8D0E0;
+  border-radius: 6px;
+  padding: 5px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.subdb-link-btn:hover {
+  background: #DDE4F0;
+  border-color: var(--navy);
+}
+.subdb-no-link {
+  font-size: 11px;
+  color: #aaa;
+  font-style: italic;
+}
+.subdb-toggle-btn {
+  background: none;
+  border: 1px solid #CCC;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #555;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.subdb-toggle-btn:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
 /* ══ SHED MOVE MILESTONES (live from Supabase tasks table) ═══════════════════ */
 .milestone-card {
   background: var(--white);
@@ -1240,7 +1336,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
     <div class="section-label">Strategic</div>
     <div class="nav-item" data-view="strategic">3-Year Outcomes</div>
     <div class="nav-item" data-view="pillars">Pillars</div>
-    <div class="nav-item" data-view="projects">Projects</div>
+    <div class="nav-item" data-view="projects">Project sub databases</div>
 
     <div class="section-label">By Year</div>
     <div class="nav-group" id="grp-2026">
@@ -4139,71 +4235,82 @@ function deriveFactoryMoveRag() {
 }
 
 function renderProjects(main) {
-  const ragLabel = { red: 'Red', amber: 'Amber', green: 'Green' };
+  // Sub-database registry
+  // Active entries at top; planning/closed in a collapsible section.
+  const activeEntries = [
+    {
+      name: 'Factory Move / Shed Move',
+      status: 'Active',
+      statusColor: '#27AE60',
+      statusBg: '#D5F5E3',
+      link: 'https://shedmove.abhgroup.com.au',
+      description: 'St Marys to Erskine Park relocation. Managed in the Shed Move Tracker.'
+    }
+  ];
 
-  // Derive Factory Move status from live milestone data
-  const factoryMoveStatus = deriveFactoryMoveRag();
+  const planningEntries = [
+    {
+      name: 'Brisbane Shed',
+      status: 'Planning',
+      statusColor: '#1A5276',
+      statusBg: '#D6EAF8',
+      link: '',
+      description: 'New Brisbane site. Sub-database to be set up in due course.'
+    }
+  ];
 
-  const cards = PROJECT_REGISTER.map(p => {
-    // Factory Move uses auto-derived status; all others are manual
-    const isLive = p.name === 'Factory Move';
-    const rag = isLive ? factoryMoveStatus.rag : p.rag;
-    const ragClass = 'rag-' + rag;
-    const statusSuffix = isLive
-      ? `<span style="font-size:10px;color:#888;margin-left:5px;">(Live)</span>`
-      : `<span style="font-size:10px;color:#888;margin-left:5px;">(Manual)</span>`;
-
-    const subtitleHtml = p.subtitle
-      ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;font-weight:normal;">${esc(p.subtitle)}</div>`
-      : '';
-    const linkIconHtml = p.link
-      ? `<span class="link-icon" title="Open app">&#8599;</span>`
-      : '';
-    const targetHtml = p.targetDate
-      ? `<div class="project-meta-row"><span class="project-meta-label">Target</span><span class="project-meta-value">${esc(p.targetDate)}</span></div>`
-      : '';
-    const cardAttrs = p.link
-      ? `class="project-card has-link" onclick="window.open('${p.link}','_blank')" role="link" tabindex="0"`
-      : `class="project-card"`;
-
+  function renderEntry(e) {
+    const linkAttrs = e.link
+      ? `onclick="window.open('${e.link}','_blank')" role="link" tabindex="0" style="cursor:pointer;"`
+      : `style="cursor:default;"`;
+    const linkChevron = e.link
+      ? `<a href="${e.link}" target="_blank" rel="noopener" class="subdb-link-btn" onclick="event.stopPropagation();">Open &#8599;</a>`
+      : `<span class="subdb-no-link">No link yet</span>`;
     return `
-<div ${cardAttrs}>
-  <div class="project-card-header">
-    <div class="project-name">${esc(p.name)}${subtitleHtml}</div>
-    ${linkIconHtml}
+<div class="subdb-row" ${linkAttrs}>
+  <div class="subdb-row-left">
+    <div class="subdb-name">${esc(e.name)}</div>
+    <div class="subdb-desc">${esc(e.description)}</div>
   </div>
-  <div class="project-card-body">
-    <div class="project-meta-row">
-      <span class="project-meta-label">Pillar</span>
-      <span class="project-meta-value">${esc(p.pillar)}</span>
-    </div>
-    <div class="project-meta-row">
-      <span class="project-meta-label">Owner</span>
-      <span class="project-meta-value">${esc(p.owner)}</span>
-    </div>
-    <div class="project-meta-row">
-      <span class="project-meta-label">Status</span>
-      <span class="project-meta-value">
-        <span class="rag-badge">
-          <span class="rag-dot ${ragClass}"></span>
-          <span class="rag-label ${ragClass}">${ragLabel[rag]}</span>
-        </span>${statusSuffix}
-      </span>
-    </div>
-    ${targetHtml}
+  <div class="subdb-row-right">
+    <span class="subdb-status-badge" style="background:${e.statusBg};color:${e.statusColor};">${esc(e.status)}</span>
+    ${linkChevron}
   </div>
 </div>`;
-  }).join('');
+  }
+
+  const activeHtml = activeEntries.map(renderEntry).join('');
+  const planningHtml = planningEntries.map(renderEntry).join('');
 
   main.innerHTML = `
-<div style="margin-bottom:20px;">
-  <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-bottom:4px;">Projects</div>
-  <div style="font-size:13px;color:#666;">Strategic project register. Linked projects open the operational app. Status marked (Live) is auto-derived from source data; (Manual) requires manual update.</div>
+<div style="margin-bottom:24px;">
+  <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-bottom:6px;">Project sub databases</div>
+  <div style="font-size:13px;color:#666;line-height:1.5;">Projects that are too detailed to manage in this planner each have a dedicated operational app or database. This page is the launch pad to those sub-databases. Click any active entry to open its app.</div>
 </div>
-<div class="project-grid">
-  ${cards}
+
+<div class="subdb-section-label">Active</div>
+<div class="subdb-list">
+  ${activeHtml}
 </div>
-<div style="margin-top:28px;">
+
+<div style="margin-top:20px;">
+  <button class="subdb-toggle-btn" onclick="
+    var sec = document.getElementById('subdb-planning');
+    var lbl = document.getElementById('subdb-toggle-lbl');
+    var expanded = sec.style.display !== 'none';
+    sec.style.display = expanded ? 'none' : 'block';
+    lbl.textContent = expanded ? 'Planning / Archived ▾' : 'Planning / Archived ▴';
+  ">
+    <span id="subdb-toggle-lbl">Planning / Archived &#9662;</span>
+  </button>
+  <div id="subdb-planning" style="display:none;margin-top:12px;">
+    <div class="subdb-list">
+      ${planningHtml}
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;">
   ${renderShedMilestones()}
 </div>`;
 }
