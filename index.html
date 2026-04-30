@@ -1124,6 +1124,84 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 .rag-label.rag-red   { color: var(--red); }
 .rag-label.rag-amber { color: var(--amber); }
 .rag-label.rag-green { color: var(--green); }
+
+/* ══ SHED MOVE MILESTONES (live from Supabase tasks table) ═══════════════════ */
+.milestone-card {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.milestone-card-header {
+  background: var(--navy);
+  color: var(--white);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.milestone-card-title {
+  font-size: 14px;
+  font-weight: bold;
+}
+.milestone-card-badge {
+  font-size: 10px;
+  background: rgba(255,255,255,0.18);
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: rgba(255,255,255,0.85);
+  font-weight: normal;
+  letter-spacing: 0.3px;
+}
+.milestone-card-readonly {
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  font-style: italic;
+}
+.milestone-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.milestone-table th {
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #888;
+  padding: 8px 14px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+}
+.milestone-table td {
+  font-size: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  color: var(--dktext);
+  vertical-align: middle;
+}
+.milestone-table tr:last-child td { border-bottom: none; }
+.milestone-table tr.ms-row {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.milestone-table tr.ms-row:hover { background: #F5F8FF; }
+.ms-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+}
+.ms-link-hint {
+  font-size: 10px;
+  color: var(--blue);
+  margin-left: 4px;
+  opacity: 0.7;
+}
 </style>
 </head>
 <body>
@@ -1333,6 +1411,106 @@ try {
     sb = window.supabase.createClient(SB_URL, SB_KEY);
   }
 } catch(e) { console.warn('Supabase init failed:', e); }
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SHED MOVE KEY MILESTONES (live read from Supabase tasks table)
+// IDs 200-206 are the 7 key milestones inserted 30/04/2026
+// ══════════════════════════════════════════════════════════════════════════════
+const SHED_MILESTONE_IDS = [200, 201, 202, 203, 204, 205, 206];
+let _shedMilestones = [];   // populated by loadShedMilestones()
+
+async function loadShedMilestones() {
+  if (!sb) return;
+  try {
+    const ids = SHED_MILESTONE_IDS.join(',');
+    const { data, error } = await sb
+      .from('tasks')
+      .select('id,description,status,planned_finish,notes,critical')
+      .in('id', SHED_MILESTONE_IDS);
+    if (error) { console.warn('Shed milestones load error:', error); return; }
+    if (data) {
+      // Parse notes JSON for each row
+      _shedMilestones = data.map(r => {
+        let meta = {};
+        try { meta = JSON.parse(r.notes || '{}'); } catch(e) {}
+        return { ...r, meta };
+      });
+      // Sort by planned_finish ascending
+      _shedMilestones.sort((a, b) => (a.planned_finish || '') < (b.planned_finish || '') ? -1 : 1);
+    }
+  } catch(e) { console.warn('loadShedMilestones failed:', e); }
+}
+
+function fmtMilestoneDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(d,10)} ${months[parseInt(m,10)-1]} ${y}`;
+}
+
+function renderShedMilestones() {
+  const today = new Date().toISOString().slice(0, 10);
+  const SHED_URL = 'https://shedmove.abhgroup.com.au';
+
+  // Group by pillar
+  const byPillar = {};
+  _shedMilestones.forEach(m => {
+    const p = m.meta.pillar || 'General';
+    if (!byPillar[p]) byPillar[p] = [];
+    byPillar[p].push(m);
+  });
+
+  // Pillar order: Revenue and Growth first, then Operational Excellence
+  const pillarOrder = ['Revenue and Growth', 'Operational Excellence'];
+  const pillars = [...pillarOrder.filter(p => byPillar[p]), ...Object.keys(byPillar).filter(p => !pillarOrder.includes(p))];
+
+  const blocks = pillars.map(pillar => {
+    const rows = byPillar[pillar].map(m => {
+      const st = m.status || 'Not Started';
+      const due = m.planned_finish || '';
+      const origDue = m.meta.original_due_date || '';
+      const isOverdueFlag = st !== 'Complete' && due && due < today;
+
+      let badgeBg, badgeColor, badgeText;
+      if (st === 'Complete') {
+        badgeBg = '#D5F5E3'; badgeColor = '#1E8449'; badgeText = 'Complete';
+      } else if (st === 'In Progress') {
+        badgeBg = '#D6EAF8'; badgeColor = '#1A5276'; badgeText = 'In Progress';
+      } else if (isOverdueFlag) {
+        badgeBg = '#FADBD8'; badgeColor = '#922B21'; badgeText = 'Overdue';
+      } else {
+        badgeBg = '#EAECEE'; badgeColor = '#5D6D7E'; badgeText = 'Not Started';
+      }
+
+      const dateDiff = (origDue && due && due !== origDue)
+        ? ` <span style="color:#E67E22;font-size:10px;">(was ${fmtMilestoneDate(origDue)})</span>`
+        : '';
+
+      return `<tr class="ms-row" onclick="window.open('${SHED_URL}','_blank')" title="Open Shed Move Tracker">
+        <td>${esc(m.description)}</td>
+        <td><span class="ms-status-badge" style="background:${badgeBg};color:${badgeColor};">${badgeText}</span></td>
+        <td>${fmtMilestoneDate(due)}${dateDiff}</td>
+        <td style="text-align:center;"><span class="ms-link-hint">&#8599;</span></td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="milestone-card">
+  <div class="milestone-card-header">
+    <span class="milestone-card-title">Shed Move Key Milestones &mdash; ${esc(pillar)}</span>
+    <span class="milestone-card-badge">Live from Shed Move Tracker</span>
+    <span class="milestone-card-readonly">Read only &mdash; managed in <a href="${SHED_URL}" target="_blank" style="color:rgba(255,255,255,0.85);">shedmove.abhgroup.com.au</a></span>
+  </div>
+  <table class="milestone-table">
+    <thead><tr><th>Milestone</th><th>Status</th><th>Due Date</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</div>`;
+  }).join('');
+
+  return blocks || '<div style="padding:16px;color:#888;font-size:13px;">No milestone data loaded.</div>';
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TEAM LIST
@@ -2028,6 +2206,7 @@ async function initData() {
   // Backfill pillars on any task missing one (safety net for legacy data)
   backfillPillars();
   populatePersonFilter();
+  await loadShedMilestones();
   await loadRevenueData();
   updateRevenueChip();
   // Deep-link support: if URL has ?pillar=X, pre-filter the All Tasks view
@@ -4024,6 +4203,9 @@ function renderProjects(main) {
 </div>
 <div class="project-grid">
   ${cards}
+</div>
+<div style="margin-top:28px;">
+  ${renderShedMilestones()}
 </div>`;
 }
 
