@@ -3540,9 +3540,12 @@ function renderWorkload(main) {
 // ══════════════════════════════════════════════════════════════════════════════
 // TIMELINE VIEW
 // ══════════════════════════════════════════════════════════════════════════════
+let _timelineShowCompleted = false;
+
 function renderTimeline(main) {
-  const withDates = tasks.filter(t => t.dueDate).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
-  const noDates = tasks.filter(t => !t.dueDate);
+  const withDates = tasks.filter(t => t.dueDate && (_timelineShowCompleted || t.status !== 'complete'))
+                         .sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  const noDates = tasks.filter(t => !t.dueDate && (_timelineShowCompleted || t.status !== 'complete'));
 
   const byMonth = {};
   withDates.forEach(t => {
@@ -3551,7 +3554,13 @@ function renderTimeline(main) {
     byMonth[m].push(t);
   });
 
-  let html = '<div class="view-header"><div class="view-title">Timeline</div></div>';
+  const chk = _timelineShowCompleted ? 'checked' : '';
+  let html = `<div class="view-header">
+    <div class="view-title">Timeline</div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#555;font-weight:normal;">
+      <input type="checkbox" ${chk} onchange="_timelineShowCompleted=this.checked;renderTimeline(document.getElementById('main'))"> Show completed
+    </label>
+  </div>`;
 
   Object.entries(byMonth).forEach(([month, items]) => {
     html += `<div class="timeline-month">
