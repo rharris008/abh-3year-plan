@@ -1312,9 +1312,6 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
       <label>Space</label>
       <select id="modal-space"></select>
 
-      <label>List</label>
-      <select id="modal-list"></select>
-
       <div style="display:flex;gap:12px;">
         <div style="flex:1">
           <label>Status</label>
@@ -1589,11 +1586,6 @@ const SPACES = [
   'Month end reminders', 'Finance Team ongoing efficiency', 'My tasks'
 ];
 
-const LISTS = [
-  'List', '2026-2028 Strategic Outcomes',
-  'Q1 Strategic Priorities - Stabilise core operations to enable scalable growth.',
-  'Q2 Strategic Priorities - Start to scale for growth'
-];
 
 // ══ TEAMS (full structure: spaces, members, label) ═══════════════════════════
 // 'all' members = everyone can see the team's tasks (no restriction)
@@ -1786,7 +1778,7 @@ function strategicTasks() { return tasks.filter(isStrategic); }
 // JS-side keyword classifier — safety net for any task missing a pillar.
 function classifyPillar(t) {
   const haystack = [
-    t.name || '', t.content || '', t.list || '', t.folder || '', t.space || ''
+    t.name || '', t.content || '', t.folder || '', t.space || ''
   ].join(' ').toLowerCase();
   const has = (kws) => kws.some(k => haystack.includes(k));
   if (has(['safety', 'ppe', 'incident', 'near miss', 'hazard'])) return 'Safety Culture';
@@ -2066,7 +2058,6 @@ function taskToDbRow(t) {
     created_by: t.createdBy || '',
     space: t.space || '',
     folder: t.folder || '',
-    list: t.list || '',
     pillar: t.pillar || null,
     parent_id: t.parentId || null,
     parent_name: t.parentName || null,
@@ -2098,7 +2089,6 @@ function dbRowToTask(r) {
     createdBy: r.created_by || '',
     space: r.space || '',
     folder: r.folder || '',
-    list: r.list || '',
     pillar: r.pillar || null,
     parentId: r.parent_id || null,
     parentName: r.parent_name || '',
@@ -2784,7 +2774,6 @@ function renderTaskList(main) {
     </div>
     <div class="filter-bar">
       <select id="f-pillar" onchange="applyFilters()"><option value="">All Pillars</option></select>
-      <select id="f-list" onchange="applyFilters()"><option value="">All Lists</option></select>
       <select id="f-status" onchange="applyFilters()">
         <option value="">All Statuses</option>
         <option>to do</option><option>in progress</option><option>complete</option><option>blocked</option><option>on hold</option>
@@ -2803,8 +2792,6 @@ function renderTaskList(main) {
   // Populate filter dropdowns
   const pillarSelect = document.getElementById('f-pillar');
   PILLARS.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; pillarSelect.appendChild(o); });
-  const listSelect = document.getElementById('f-list');
-  LISTS.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; listSelect.appendChild(o); });
   const assSelect = document.getElementById('f-assignee');
   TEAM.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; assSelect.appendChild(o); });
   const unO = document.createElement('option'); unO.value = '__unassigned__'; unO.textContent = 'Unassigned'; assSelect.appendChild(unO);
@@ -2847,7 +2834,6 @@ let _notCompleteOnly = false;
 
 function applyFilters() {
   const pillar = document.getElementById('f-pillar')?.value || '';
-  const list = document.getElementById('f-list')?.value || '';
   const status = document.getElementById('f-status')?.value || '';
   const priority = document.getElementById('f-priority')?.value || '';
   const assignee = document.getElementById('f-assignee')?.value || '';
@@ -2862,7 +2848,6 @@ function applyFilters() {
 
   let filtered = sourceTasks.filter(t => {
     if (pillar && t.pillar !== pillar) return false;
-    if (list && t.list !== list) return false;
     if (status && t.status !== status) return false;
     if (_notCompleteOnly && t.status === 'complete') return false;
     if (priority && t.priority !== priority) return false;
@@ -3842,9 +3827,6 @@ function openModal(taskId) {
   const spaceSelect = document.getElementById('modal-space');
   spaceSelect.innerHTML = SPACES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
-  const listSelect = document.getElementById('modal-list');
-  listSelect.innerHTML = LISTS.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
-
   // Populate Responsible / Accountable single-select dropdowns
   const respSelect = document.getElementById('modal-responsible');
   const accSelect = document.getElementById('modal-accountable');
@@ -3867,7 +3849,6 @@ function openModal(taskId) {
     document.getElementById('modal-name').value = task.name;
     document.getElementById('modal-pillar').value = task.pillar || '';
     document.getElementById('modal-space').value = task.space;
-    document.getElementById('modal-list').value = task.list;
     document.getElementById('modal-status').value = task.status;
     document.getElementById('modal-priority').value = task.priority;
     document.getElementById('modal-due').value = task.dueDate || '';
@@ -3890,7 +3871,6 @@ function openModal(taskId) {
     document.getElementById('modal-name').value = '';
     document.getElementById('modal-pillar').value = '';
     document.getElementById('modal-space').value = SPACES[0];
-    document.getElementById('modal-list').value = LISTS[0];
     document.getElementById('modal-status').value = 'to do';
     document.getElementById('modal-priority').value = 'NORMAL';
     document.getElementById('modal-due').value = '';
@@ -3953,7 +3933,6 @@ function saveTask() {
     name,
     pillar: document.getElementById('modal-pillar').value || null,
     space: document.getElementById('modal-space').value,
-    list: document.getElementById('modal-list').value,
     status: document.getElementById('modal-status').value,
     priority: document.getElementById('modal-priority').value,
     assignees,
