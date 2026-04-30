@@ -1452,7 +1452,7 @@ function renderShedMilestones() {
   const SHED_URL = 'https://shedmove.abhgroup.com.au';
 
   // All shed move milestones render in ONE card regardless of pillar tag.
-  // Pillar = Operational Excellence (matching Factory Move project tile).
+  // Pillar = Revenue and Growth (matching Factory Move project tile).
   // Source of truth is shedmove.abhgroup.com.au — read only here.
   if (!_shedMilestones.length) {
     return '<div style="padding:16px;color:#888;font-size:13px;">No milestone data loaded.</div>';
@@ -1490,7 +1490,7 @@ function renderShedMilestones() {
   return `<div class="milestone-card">
   <div class="milestone-card-header">
     <span class="milestone-card-title">Shed Move Key Milestones</span>
-    <span class="milestone-card-badge">Operational Excellence &bull; Live from Shed Move Tracker</span>
+    <span class="milestone-card-badge">Revenue and Growth &bull; Live from Shed Move Tracker</span>
     <span class="milestone-card-readonly">Read only &mdash; managed in <a href="${SHED_URL}" target="_blank" style="color:rgba(255,255,255,0.85);">shedmove.abhgroup.com.au</a></span>
   </div>
   <table class="milestone-table">
@@ -4054,7 +4054,7 @@ const PROJECT_REGISTER = [
   {
     name: 'Factory Move',
     subtitle: 'Cask Line A, Water Treatment / RO, services, fitout',
-    pillar: 'Operational Excellence',
+    pillar: 'Revenue and Growth',
     owner: 'Rob Harris',
     rag: 'amber',
     targetDate: '',
