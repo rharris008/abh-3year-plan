@@ -2485,7 +2485,13 @@ function renderView() {
       case 'dashboard': renderDashboard(main); break;
       case 'pillars': renderPillars(main); break;
       case 'overdue': renderFilteredList(main, 'Overdue Tasks', t => isOverdue(t)); break;
-      case 'mytasks': renderFilteredList(main, _personFilter ? `${_personFilter}'s Tasks` : 'My Tasks (Robert Harris)', t => hasAssignee(t, _personFilter || 'Robert Harris')); break;
+      case 'mytasks':
+        if (_personFilter) {
+          renderFilteredList(main, `${_personFilter}'s Tasks`, t => hasAssignee(t, _personFilter));
+        } else {
+          renderFilteredList(main, 'All Tasks', t => true);
+        }
+        break;
       case 'strategic': renderStrategic(main); break;
       case 'projects': renderProjects(main); break;
       case 'person': renderPersonView(main); break;
