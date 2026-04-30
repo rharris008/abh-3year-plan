@@ -3022,11 +3022,12 @@ function applyFilters() {
   const search = (document.getElementById('f-search')?.value || '').toLowerCase();
 
   // Source of truth:
-  // - No specific assignee selected → show strategic 3-year tasks only (matches dashboard)
-  // - Specific assignee selected → show ALL that person's tasks (strategic + team to-do boards)
-  // This way the default All Tasks view is the 3-year plan, but finance/ops people can still
-  // see their full workload by selecting their own name.
-  const sourceTasks = assignee ? tasks : strategicTasks();
+  // - "Viewing as" = All (empty) + no assignee filter → show ALL tasks from everyone
+  // - "Viewing as" = specific person + no assignee filter → show strategic 3-year tasks only
+  // - Any assignee filter selected → show ALL tasks (filtered to that assignee)
+  // This way "All" in Viewing As means everyone's full workload, while individual views
+  // default to the 3-year strategic plan.
+  const sourceTasks = (assignee || !_personFilter) ? tasks : strategicTasks();
   const showCompleted = document.getElementById('f-show-completed')?.checked || false;
 
   let filtered = sourceTasks.filter(t => {
@@ -3047,10 +3048,13 @@ function applyFilters() {
       noteEl.textContent = `Showing ALL tasks assigned to ${assignee} (including finance, team to-do, and personal lists).`;
       noteEl.style.display = 'block';
     } else if (assignee === '__unassigned__') {
-      noteEl.textContent = 'Showing unassigned 3-year strategic tasks only.';
+      noteEl.textContent = 'Showing unassigned tasks.';
+      noteEl.style.display = 'block';
+    } else if (!_personFilter) {
+      noteEl.textContent = 'Showing all tasks from everyone. Select a person in "Viewing as" to see the 3-year strategic view.';
       noteEl.style.display = 'block';
     } else {
-      noteEl.textContent = 'Showing 3-year strategic tasks only. Select a person to see their full workload across all boards.';
+      noteEl.textContent = 'Showing 3-year strategic tasks only. Select a person in the Assignee filter to see their full workload.';
       noteEl.style.display = 'block';
     }
   }
