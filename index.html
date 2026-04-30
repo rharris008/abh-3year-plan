@@ -2880,6 +2880,9 @@ function renderTaskList(main) {
       </select>
       <select id="f-assignee" onchange="applyFilters()"><option value="">All Assignees</option></select>
       <input type="text" id="f-search" placeholder="Search tasks..." oninput="applyFilters()">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap;color:#555;margin-left:4px;">
+        <input type="checkbox" id="f-show-completed" onchange="applyFilters()"> Show completed
+      </label>
     </div>
     <div id="f-scope-note" style="padding:6px 12px;font-size:11px;color:#666;background:#f5f5f5;border-left:3px solid var(--blue);margin-bottom:8px;display:none;"></div>
     <div id="task-table-container"></div>
@@ -2941,11 +2944,12 @@ function applyFilters() {
   // This way the default All Tasks view is the 3-year plan, but finance/ops people can still
   // see their full workload by selecting their own name.
   const sourceTasks = assignee ? tasks : strategicTasks();
+  const showCompleted = document.getElementById('f-show-completed')?.checked || false;
 
   let filtered = sourceTasks.filter(t => {
     if (pillar && t.pillar !== pillar) return false;
     if (status && t.status !== status) return false;
-    if (_notCompleteOnly && t.status === 'complete') return false;
+    if (!showCompleted && status !== 'complete' && t.status === 'complete') return false;
     if (priority && t.priority !== priority) return false;
     if (assignee === '__unassigned__' && t.assignees.length > 0) return false;
     if (assignee && assignee !== '__unassigned__' && !hasAssignee(t, assignee)) return false;
