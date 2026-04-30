@@ -1756,10 +1756,10 @@ function canViewTask(t, viewerName) {
   if (!team) return true;
   if (team.members === 'all') return true;
   if (team.members === 'creator') {
-    if (!viewerName) return false;
+    if (!viewerName) return true;  // All Tasks mode: show everything
     return (t.createdBy || '').toLowerCase() === viewerName.toLowerCase();
   }
-  if (!viewerName) return false;  // no Viewing-as set: restricted team tasks hidden
+  if (!viewerName) return true;  // All Tasks mode (no Viewing-as): show everything
   // Viewer can see if they ARE the A or R, or if they are in the owning team
   const vl = viewerName.toLowerCase();
   if (acct && acct.toLowerCase() === vl) return true;
