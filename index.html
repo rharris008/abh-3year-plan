@@ -4100,15 +4100,6 @@ const PROJECT_REGISTER = [
     link: ''
   },
   {
-    name: 'HMPS Optimisation',
-    subtitle: '',
-    pillar: 'Operational Excellence',
-    owner: 'Rob Harris',
-    rag: 'amber',
-    targetDate: '',
-    link: ''
-  },
-  {
     name: 'CMMS Live and Maintained',
     subtitle: '',
     pillar: 'Safety Culture',
@@ -4146,11 +4137,43 @@ const PROJECT_REGISTER = [
   }
 ];
 
+// ── Factory Move status auto-derived from shed move milestone data ─────────────
+// Red   : any milestone is overdue (not Complete and planned_finish < today)
+// Amber : any milestone is In Progress OR has planned_finish within 14 days
+// Green : all milestones are on track (none overdue, none approaching)
+// Falls back to 'amber' if milestone data is not yet loaded.
+function deriveFactoryMoveRag() {
+  if (!_shedMilestones.length) return { rag: 'amber', source: 'live' };
+  const today = new Date().toISOString().slice(0, 10);
+  const in14 = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  let hasOverdue = false;
+  let hasAmber = false;
+  for (const m of _shedMilestones) {
+    if (m.status === 'Complete') continue;
+    const due = m.planned_finish || '';
+    if (due && due < today) { hasOverdue = true; break; }
+    if (m.status === 'In Progress' || (due && due <= in14)) hasAmber = true;
+  }
+  if (hasOverdue) return { rag: 'red', source: 'live' };
+  if (hasAmber)   return { rag: 'amber', source: 'live' };
+  return { rag: 'green', source: 'live' };
+}
+
 function renderProjects(main) {
   const ragLabel = { red: 'Red', amber: 'Amber', green: 'Green' };
 
+  // Derive Factory Move status from live milestone data
+  const factoryMoveStatus = deriveFactoryMoveRag();
+
   const cards = PROJECT_REGISTER.map(p => {
-    const ragClass = 'rag-' + p.rag;
+    // Factory Move uses auto-derived status; all others are manual
+    const isLive = p.name === 'Factory Move';
+    const rag = isLive ? factoryMoveStatus.rag : p.rag;
+    const ragClass = 'rag-' + rag;
+    const statusSuffix = isLive
+      ? `<span style="font-size:10px;color:#888;margin-left:5px;">(Live)</span>`
+      : `<span style="font-size:10px;color:#888;margin-left:5px;">(Manual)</span>`;
+
     const subtitleHtml = p.subtitle
       ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;font-weight:normal;">${esc(p.subtitle)}</div>`
       : '';
@@ -4184,8 +4207,8 @@ function renderProjects(main) {
       <span class="project-meta-value">
         <span class="rag-badge">
           <span class="rag-dot ${ragClass}"></span>
-          <span class="rag-label ${ragClass}">${ragLabel[p.rag]}</span>
-        </span>
+          <span class="rag-label ${ragClass}">${ragLabel[rag]}</span>
+        </span>${statusSuffix}
       </span>
     </div>
     ${targetHtml}
@@ -4196,7 +4219,7 @@ function renderProjects(main) {
   main.innerHTML = `
 <div style="margin-bottom:20px;">
   <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-bottom:4px;">Projects</div>
-  <div style="font-size:13px;color:#666;">Strategic project register. Linked projects open the operational app.</div>
+  <div style="font-size:13px;color:#666;">Strategic project register. Linked projects open the operational app. Status marked (Live) is auto-derived from source data; (Manual) requires manual update.</div>
 </div>
 <div class="project-grid">
   ${cards}
