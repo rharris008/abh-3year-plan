@@ -1897,7 +1897,7 @@ function renderTeamBlocked(main, teamKey) {
   `;
 }
 
-// ══ STRATEGIC PILLARS (the 7 ABH operational pillars) ════════════════════════
+// ══ STRATEGIC PILLARS (the 7 ABH operational pillars + BAU) ═════════════════
 const PILLARS = [
   'Revenue and Growth',
   'Operational Excellence',
@@ -1905,7 +1905,8 @@ const PILLARS = [
   'Geographical Expansion',
   'Supply Chain',
   'Investing in Our Staff',
-  'Safety Culture'
+  'Safety Culture',
+  'Business as Usual'
 ];
 const PILLAR_COLOURS = {
   'Revenue and Growth':       '#27AE60',
@@ -1914,7 +1915,8 @@ const PILLAR_COLOURS = {
   'Geographical Expansion':   '#16A085',
   'Supply Chain':             '#E67E22',
   'Investing in Our Staff':   '#1ABC9C',
-  'Safety Culture':           '#C0392B'
+  'Safety Culture':           '#C0392B',
+  'Business as Usual':        '#7F8C8D'
 };
 
 // Track type: 'strategic' (part of the 3-year plan) or 'todo' (team / personal board).
