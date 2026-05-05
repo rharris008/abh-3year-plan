@@ -3443,7 +3443,13 @@ function renderPersonView(main) {
     });
   });
 
-  let html = '<div class="view-header"><div class="view-title">Tasks by Person</div></div><div class="person-grid">';
+  const personChk = _personShowCompleted ? 'checked' : '';
+  let html = `<div class="view-header">
+    <div class="view-title">Tasks by Person</div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#555;font-weight:normal;">
+      <input type="checkbox" ${personChk} onchange="_personShowCompleted=this.checked;renderPersonView(document.getElementById('main'))"> Show completed
+    </label>
+  </div><div class="person-grid">`;
 
   Object.entries(byPerson).sort((a,b) => b[1].length - a[1].length).forEach(([name, personTasks]) => {
     const od = personTasks.filter(t => isOverdue(t)).length;
@@ -3481,8 +3487,9 @@ function togglePersonTasks(btn, personName) {
     listEl.style.display = 'block';
     btn.textContent = 'Hide tasks';
     const personTasks = tasks.filter(t =>
-      (t.assignees.length === 0 && personName === 'Unassigned') ||
-      hasAssignee(t, personName)
+      ((t.assignees.length === 0 && personName === 'Unassigned') ||
+      hasAssignee(t, personName)) &&
+      (_personShowCompleted || t.status !== 'complete')
     );
     let html = '';
     personTasks.forEach(t => {
@@ -3543,6 +3550,7 @@ function renderWorkload(main) {
 // TIMELINE VIEW
 // ══════════════════════════════════════════════════════════════════════════════
 let _timelineShowCompleted = false;
+let _personShowCompleted = false;
 
 function renderTimeline(main) {
   const withDates = tasks.filter(t => t.dueDate && (_timelineShowCompleted || t.status !== 'complete'))
