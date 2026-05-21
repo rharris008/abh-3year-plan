@@ -4040,7 +4040,13 @@ async function resetToSeed() {
 // ══════════════════════════════════════════════════════════════════════════════
 // TASK MODAL
 // ══════════════════════════════════════════════════════════════════════════════
-function openModal(taskId) {
+async function openModal(taskId) {
+  // If TEAM is empty (first load before initData completes, or cleared localStorage)
+  // fetch it now so the R/A dropdowns are populated.
+  if (TEAM.length === 0) {
+    await loadTeamFromSupabase();
+  }
+
   const modal = document.getElementById('task-modal');
   const titleEl = document.getElementById('modal-title');
   const deleteBtn = document.getElementById('modal-delete-btn');
