@@ -1604,6 +1604,16 @@ function renderShedMilestones() {
 // TEAM LIST
 // ══════════════════════════════════════════════════════════════════════════════
 // Source of truth is Supabase abh_directory (filtered to ABH members).
+// Hardcoded fallback used if both Supabase and localStorage fail to load.
+// Keeps the "Viewing as" and task assignment dropdowns functional offline.
+// Updated automatically when Supabase loads — this list is last resort only.
+const TEAM_FALLBACK = [
+  'Aaron Mattin', 'Anthony Rose', 'Issareeya Yeeka', 'Jasmine Pereira',
+  'Jay Curds', 'Jeremy Wheeler', 'Kate Harris', 'Lisa Fontanot',
+  'Maral Movsessian', 'Phil Mann', 'Ravin Singh', 'Richard Carlick',
+  'Robert Harris', 'Sharon Salt',
+];
+
 // loadTeamFromSupabase() hydrates this on boot. Empty array until then.
 let TEAM = [];
 
@@ -2146,6 +2156,7 @@ const NAME_ALIASES = {
   'rob harris': 'Robert Harris',
   'robert': 'Robert Harris',
   'ravin': 'Ravin Singh',
+  'ravin singh': 'Ravin Singh',
   'sharon': 'Sharon Salt',
   'lisa': 'Lisa Fontanot',
   'jeremy': 'Jeremy Wheeler',
@@ -2154,6 +2165,7 @@ const NAME_ALIASES = {
   'ploy': 'Issareeya Yeeka',
   'issareeya': 'Issareeya Yeeka',
   'richard': 'Richard Carlick',  // default Richard. If both Richards in same task, second is Magin per data.
+  'richard carlick': 'Richard Carlick',  // normalise legacy lowercase from DB
   'tony': 'Anthony Rose',
   'phil': 'Phil Mann',
   'phil j. mann': 'Phil Mann',
@@ -2326,6 +2338,12 @@ async function saveAll() {
 async function initData() {
   loadTeamFromLocal();
   await loadTeamFromSupabase();
+  // If both Supabase and localStorage failed, use the hardcoded fallback so
+  // the assignment dropdowns are never completely empty.
+  if (TEAM.length === 0) {
+    TEAM = TEAM_FALLBACK.slice();
+    console.info('Team loaded from hardcoded fallback (Supabase unavailable)');
+  }
   loadTeamsFromLocal();
   await loadTeamsFromSupabase();
   applyTeamLabelsToSidebar();
