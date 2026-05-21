@@ -1619,6 +1619,13 @@ let TEAM = [];
 
 function loadTeamFromLocal() {
   try {
+    // Flush stale team cache if version mismatch (e.g. after a name change in the directory)
+    const cachedTeamVersion = localStorage.getItem(TEAM_VERSION_KEY);
+    if (cachedTeamVersion !== TEAM_CACHE_VERSION) {
+      localStorage.removeItem('abh3y_team');
+      localStorage.removeItem(TEAM_VERSION_KEY);
+      return;
+    }
     const raw = localStorage.getItem('abh3y_team');
     if (!raw) return;
     const parsed = JSON.parse(raw);
@@ -1647,6 +1654,7 @@ async function loadTeamFromSupabase() {
 }
 function saveTeamToLocal() {
   localStorage.setItem('abh3y_team', JSON.stringify(TEAM));
+  localStorage.setItem(TEAM_VERSION_KEY, TEAM_CACHE_VERSION);
 }
 async function addPersonPrompt() {
   const name = prompt('Add a person to the team.\nEnter their full name (e.g. "Aaron Mattin"):');
@@ -2139,8 +2147,12 @@ async function autoSaveToCloud(successMessage) {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-04-13-delete-sync-v15';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-05-22-team-fix-v16';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
+// Team cache version — bump to flush stale abh3y_team from localStorage.
+// Prevents an old (empty or wrong-cased) team list overriding Supabase data.
+const TEAM_CACHE_VERSION = '2026-05-22-v1';
+const TEAM_VERSION_KEY = 'abh3y_team_version';
 
 function saveToLocal() {
   try {
@@ -2337,12 +2349,14 @@ async function saveAll() {
 
 async function initData() {
   loadTeamFromLocal();
+  console.info(`[init] TEAM after local load: ${TEAM.length} members`);
   await loadTeamFromSupabase();
+  console.info(`[init] TEAM after Supabase load: ${TEAM.length} members`);
   // If both Supabase and localStorage failed, use the hardcoded fallback so
   // the assignment dropdowns are never completely empty.
   if (TEAM.length === 0) {
     TEAM = TEAM_FALLBACK.slice();
-    console.info('Team loaded from hardcoded fallback (Supabase unavailable)');
+    console.warn('[init] Team loaded from hardcoded fallback — Supabase and localStorage both unavailable');
   }
   loadTeamsFromLocal();
   await loadTeamsFromSupabase();
@@ -3686,6 +3700,12 @@ async function renderConfig(main) {
     <div class="card" style="margin-top:16px;">
       <div class="card-header">Supabase Status</div>
       <div class="card-body" id="sb-status">Checking...</div>
+      <div style="padding:8px 12px;border-top:1px solid var(--mdgrey);">
+        <button class="btn btn-outline btn-sm" onclick="clearCacheAndReload()" style="color:var(--amber);border-color:var(--amber);">
+          Clear Cache &amp; Reload
+        </button>
+        <span style="font-size:11px;color:#999;margin-left:8px;">Use if Viewing As or assignment dropdowns are empty</span>
+      </div>
     </div>
   `;
 
@@ -3971,11 +3991,24 @@ async function checkSupabase() {
     if (error) {
       el.innerHTML = `<span style="color:var(--amber);">Supabase table "${SB_TABLE}" not found or access denied. Create the table in Supabase to enable cloud sync.</span>`;
     } else {
-      el.innerHTML = `<span style="color:var(--green);">Connected. Table "${SB_TABLE}" accessible.</span>`;
+      el.innerHTML = `<span style="color:var(--green);">Connected. Table "${SB_TABLE}" accessible. Team: ${TEAM.length} members loaded.</span>`;
     }
   } catch(e) {
     el.innerHTML = `<span style="color:var(--red);">Connection failed: ${esc(e.message)}</span>`;
   }
+}
+
+// Clear all localStorage caches and reload from Supabase. Use when people dropdowns are empty.
+async function clearCacheAndReload() {
+  if (!confirm('Clear all local caches and reload from Supabase? This will not delete any tasks.')) return;
+  localStorage.removeItem('abh3y_team');
+  localStorage.removeItem(TEAM_VERSION_KEY);
+  localStorage.removeItem('abh3y_teams');
+  localStorage.removeItem(LS_KEY);
+  localStorage.removeItem(LS_VERSION_KEY);
+  toast('Cache cleared — reloading from cloud...', 'info');
+  await initData();
+  renderView();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
