@@ -1637,11 +1637,14 @@ async function loadTeamFromSupabase() {
   try {
     // ABH-only filter: person must have 'ABH' in their companies array.
     // This hides M&N-only and pure-external records without deleting them.
+    // NOTE: companies is a JSONB column. .contains('companies', ['ABH']) generates
+    // the text-array format cs.{"ABH"} which 400s against JSONB. Use .filter()
+    // with JSON.stringify to get the correct cs.["ABH"] format instead.
     const { data, error } = await sb
       .from('abh_directory')
       .select('full_name,companies')
       .eq('active', true)
-      .contains('companies', ['ABH'])
+      .filter('companies', 'cs', JSON.stringify(['ABH']))
       .order('full_name');
     if (error) { console.warn('team cloud load failed', error); return false; }
     if (Array.isArray(data) && data.length > 0) {
@@ -2151,7 +2154,7 @@ const CACHE_VERSION = '2026-05-22-team-fix-v16';   // bump this to invalidate st
 const LS_VERSION_KEY = 'abh_3year_version';
 // Team cache version — bump to flush stale abh3y_team from localStorage.
 // Prevents an old (empty or wrong-cased) team list overriding Supabase data.
-const TEAM_CACHE_VERSION = '2026-05-22-v1';
+const TEAM_CACHE_VERSION = '2026-05-22-v2';   // bumped: fix JSONB contains filter
 const TEAM_VERSION_KEY = 'abh3y_team_version';
 
 function saveToLocal() {
