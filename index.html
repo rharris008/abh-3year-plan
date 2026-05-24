@@ -1764,11 +1764,12 @@ function getTeamKeyForTask(t) {
 
 function canViewTask(t, viewerName) {
   // A task is visible to viewerName if:
-  //   (a) they are the Accountable or Responsible person on the task, OR
-  //   (b) they belong to the same team as the A or R person
-  // Strategic tasks (all-members team) are always visible.
-  const acct = getAccountable(t);
-  const resp = getResponsible(t);
+  //   (a) strategic team (all-members) — always visible to everyone, OR
+  //   (b) unclassified task (no team found) — visible to everyone, OR
+  //   (c) personal/creator task — only the creator sees it, OR
+  //   (d) viewer's name appears anywhere in the task's assignees array (R, A, or Consulted)
+  // NOTE: team membership alone is NOT enough — viewing as Sharon shows only tasks
+  // where Sharon is named on the task, not all tasks owned by Sharon's team.
 
   // Find which team "owns" this task (via A then R)
   const key = getTeamKeyForTask(t);
@@ -1781,11 +1782,9 @@ function canViewTask(t, viewerName) {
     return (t.createdBy || '').toLowerCase() === viewerName.toLowerCase();
   }
   if (!viewerName) return true;  // All Tasks mode (no Viewing-as): show everything
-  // Viewer can see if they ARE the A or R, or if they are in the owning team
+  // Viewer must be named on this task (as Responsible, Accountable, or Consulted)
   const vl = viewerName.toLowerCase();
-  if (acct && acct.toLowerCase() === vl) return true;
-  if (resp && resp.toLowerCase() === vl) return true;
-  return team.members.some(m => m.toLowerCase() === vl);
+  return (t.assignees || []).some(a => (a || '').toLowerCase() === vl);
 }
 
 // Returns the global tasks list filtered to what the current viewer can see.
