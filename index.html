@@ -1763,26 +1763,20 @@ function getTeamKeyForTask(t) {
 }
 
 function canViewTask(t, viewerName) {
-  // A task is visible to viewerName if:
-  //   (a) strategic team (all-members) — always visible to everyone, OR
-  //   (b) unclassified task (no team found) — visible to everyone, OR
-  //   (c) personal/creator task — only the creator sees it, OR
-  //   (d) viewer's name appears anywhere in the task's assignees array (R, A, or Consulted)
-  // NOTE: team membership alone is NOT enough — viewing as Sharon shows only tasks
-  // where Sharon is named on the task, not all tasks owned by Sharon's team.
-
-  // Find which team "owns" this task (via A then R)
+  // Personal/creator tasks: only the creator sees their own, regardless of viewerName
   const key = getTeamKeyForTask(t);
-  if (!key) return true;  // unclassified tasks are visible (safe default)
-  const team = TEAMS[key];
-  if (!team) return true;
-  if (team.members === 'all') return true;
-  if (team.members === 'creator') {
+  const team = key ? TEAMS[key] : null;
+  if (team && team.members === 'creator') {
     if (!viewerName) return true;  // All Tasks mode: show everything
     return (t.createdBy || '').toLowerCase() === viewerName.toLowerCase();
   }
-  if (!viewerName) return true;  // All Tasks mode (no Viewing-as): show everything
-  // Viewer must be named on this task (as Responsible, Accountable, or Consulted)
+
+  // All Tasks mode (no Viewing-as): show all non-personal tasks
+  if (!viewerName) return true;
+
+  // Viewing as a specific person: ONLY show tasks where they are explicitly named
+  // as Responsible, Accountable, or Consulted. Strategic, unclassified, and team
+  // tasks all require the viewer's name — team/category membership is NOT enough.
   const vl = viewerName.toLowerCase();
   return (t.assignees || []).some(a => (a || '').toLowerCase() === vl);
 }
