@@ -1337,6 +1337,7 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
     <div class="nav-item" data-view="strategic">3-Year Outcomes</div>
     <div class="nav-item" data-view="pillars">Pillars</div>
     <div class="nav-item" data-view="projects">Project sub databases</div>
+    <div class="nav-item" data-view="capex">Capital Investment Projects</div>
 
     <div class="section-label">By Year</div>
     <div class="nav-group" id="grp-2026">
@@ -1389,6 +1390,22 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
 
 <!-- ══ FOOTER ═════════════════════════════════════════════════════════════ -->
 <footer id="app-footer">INTERNAL - NOT FOR DISTRIBUTION</footer>
+
+<!-- ══ CAPEX MODAL ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="capex-modal">
+  <div class="modal" style="width:680px;">
+    <div class="modal-header">
+      <span id="capex-modal-title">Add Capex Project</span>
+      <button class="close-btn" onclick="closeCapexModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="capex-modal-body" style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;">
+    </div>
+    <div style="padding:12px 20px 16px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #eee;">
+      <button class="btn" onclick="closeCapexModal()">Cancel</button>
+      <button class="btn btn-navy" onclick="saveCapexProject()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ TASK MODAL ═════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="task-modal">
@@ -2527,6 +2544,7 @@ function renderView() {
         break;
       case 'strategic': renderStrategic(main); break;
       case 'projects': renderProjects(main); break;
+      case 'capex': renderCapex(main); break;
       case 'person': renderPersonView(main); break;
       case 'workload': renderWorkload(main); break;
       case 'gsd':
@@ -4498,6 +4516,247 @@ function renderProjects(main) {
 <div style="margin-top:32px;">
   ${renderShedMilestones()}
 </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CAPITAL INVESTMENT PROJECTS (CAPEX)
+// ══════════════════════════════════════════════════════════════════════════════
+const CAPEX_TABLE = 'capex_projects';
+
+const CAPEX_STATUSES = ['Proposed', 'For Board Approval', 'Approved', 'Deferred', 'Rejected'];
+const CAPEX_TYPES    = ['Reduces Risk', 'Increases Cash'];
+
+const CAPEX_STATUS_STYLE = {
+  'Proposed':           { bg: '#D6EAF8', color: '#1A5276' },
+  'For Board Approval': { bg: '#FEF9E7', color: '#7D6608' },
+  'Approved':           { bg: '#D5F5E3', color: '#1E8449' },
+  'Deferred':           { bg: '#F2F3F4', color: '#626567' },
+  'Rejected':           { bg: '#FADBD8', color: '#922B21' }
+};
+const CAPEX_TYPE_STYLE = {
+  'Reduces Risk':    { bg: '#D6EAF8', color: '#1B2A4A' },
+  'Increases Cash':  { bg: '#D5F5E3', color: '#1E8449' }
+};
+
+let _capexProjects = [];
+let _capexEditId   = null;   // null = new, number = editing existing
+
+function fmtAUD(v) {
+  if (v == null || v === '') return '—';
+  return '$' + parseFloat(v).toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function fmtCapexDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(d,10)} ${months[parseInt(m,10)-1]} ${y}`;
+}
+
+function capexBadge(text, styleMap) {
+  const s = styleMap[text] || { bg: '#eee', color: '#333' };
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${s.bg};color:${s.color};">${esc(text || '—')}</span>`;
+}
+
+async function loadCapexProjects() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from(CAPEX_TABLE).select('*').order('id');
+    if (error) { console.warn('capex load error:', error); return; }
+    _capexProjects = data || [];
+  } catch(e) { console.warn('loadCapexProjects failed:', e); }
+}
+
+async function renderCapex(main) {
+  main.innerHTML = `<div style="padding:24px 28px;"><div style="font-size:22px;font-weight:bold;color:var(--navy);margin-bottom:6px;">Capital Investment Projects</div><div style="color:#666;font-size:13px;">Loading…</div></div>`;
+  await loadCapexProjects();
+  _renderCapexView(main);
+}
+
+function _renderCapexView(main) {
+  const projects = _capexProjects;
+
+  // Summary tiles
+  const totalApproved = projects.filter(p => p.status === 'Approved').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const totalAll      = projects.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const countByStatus = {};
+  CAPEX_STATUSES.forEach(s => { countByStatus[s] = projects.filter(p => p.status === s).length; });
+
+  const tileHtml = `
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+  <div style="flex:1;min-width:140px;background:#fff;border:1px solid #dde3f0;border-radius:8px;padding:14px 18px;">
+    <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Total Submitted</div>
+    <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-top:4px;">${fmtAUD(totalAll)}</div>
+  </div>
+  <div style="flex:1;min-width:140px;background:#fff;border:1px solid #dde3f0;border-radius:8px;padding:14px 18px;">
+    <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Approved</div>
+    <div style="font-size:22px;font-weight:bold;color:var(--green);margin-top:4px;">${fmtAUD(totalApproved)}</div>
+  </div>
+  ${CAPEX_STATUSES.map(st => {
+    const s = CAPEX_STATUS_STYLE[st] || {};
+    return `<div style="flex:1;min-width:110px;background:${s.bg || '#f5f5f5'};border:1px solid #dde3f0;border-radius:8px;padding:14px 18px;">
+      <div style="font-size:11px;font-weight:600;color:${s.color || '#333'};text-transform:uppercase;letter-spacing:.5px;">${st}</div>
+      <div style="font-size:22px;font-weight:bold;color:${s.color || '#333'};margin-top:4px;">${countByStatus[st]}</div>
+    </div>`;
+  }).join('')}
+</div>`;
+
+  // Table
+  const tableRows = projects.length === 0
+    ? `<tr><td colspan="10" style="text-align:center;padding:32px;color:#999;">No capex projects yet. Click Add Project to get started.</td></tr>`
+    : projects.map(p => {
+        const docCell = p.onedrive_link
+          ? `<a href="${esc(p.onedrive_link)}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-weight:600;" title="${esc(p.onedrive_link)}">View &#8599;</a>`
+          : `<span style="color:#bbb;">—</span>`;
+        return `<tr style="cursor:pointer;" onclick="openCapexModal(${p.id})">
+          <td style="font-weight:600;color:var(--navy);">${esc(p.proposed_project)}</td>
+          <td class="num" style="font-weight:600;">${fmtAUD(p.amount)}</td>
+          <td><span style="font-size:11px;padding:2px 7px;border-radius:10px;background:${(PILLAR_COLOURS[p.strategic_pillar]||'#aaa')}22;color:${PILLAR_COLOURS[p.strategic_pillar]||'#555'};font-weight:600;">${esc(p.strategic_pillar||'—')}</span></td>
+          <td>${p.type ? capexBadge(p.type, CAPEX_TYPE_STYLE) : '—'}</td>
+          <td>${p.status ? capexBadge(p.status, CAPEX_STATUS_STYLE) : '—'}</td>
+          <td>${esc(p.contractor||'—')}</td>
+          <td>${esc(p.abh_pm||'—')}</td>
+          <td class="num">${p.quotes_obtained != null ? p.quotes_obtained : '—'}</td>
+          <td>${fmtCapexDate(p.expected_completion)}</td>
+          <td onclick="event.stopPropagation();">${docCell}</td>
+        </tr>`;
+      }).join('');
+
+  main.innerHTML = `
+<div style="padding:24px 28px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+    <div>
+      <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-bottom:4px;">Capital Investment Projects</div>
+      <div style="font-size:13px;color:#666;">Track all capex proposals through from submission to board approval. Click any row to edit.</div>
+    </div>
+    <button class="btn btn-navy" onclick="openCapexModal(null)" style="white-space:nowrap;">+ Add Project</button>
+  </div>
+
+  ${tileHtml}
+
+  <div style="overflow-x:auto;">
+    <table class="task-table" style="width:100%;min-width:900px;">
+      <thead><tr>
+        <th style="min-width:200px;">Proposed Project</th>
+        <th class="num">Amount</th>
+        <th>Strategic Pillar</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Contractor</th>
+        <th>ABH PM</th>
+        <th class="num">Quotes</th>
+        <th>Completion</th>
+        <th>Document</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+function openCapexModal(id) {
+  _capexEditId = id;
+  const p = id != null ? _capexProjects.find(x => x.id === id) : null;
+  document.getElementById('capex-modal-title').textContent = p ? 'Edit Capex Project' : 'Add Capex Project';
+
+  const pillarOptions = PILLARS.map(pl => `<option value="${pl}" ${p && p.strategic_pillar === pl ? 'selected' : ''}>${pl}</option>`).join('');
+  const statusOptions = CAPEX_STATUSES.map(s => `<option value="${s}" ${p && p.status === s ? 'selected' : ''}>${s}</option>`).join('');
+  const typeOptions   = CAPEX_TYPES.map(t => `<option value="${t}" ${p && p.type === t ? 'selected' : ''}>${t}</option>`).join('');
+
+  const fld = (label, html, fullWidth) =>
+    `<div style="${fullWidth ? 'grid-column:1/-1;' : ''}">
+       <label style="display:block;font-size:11px;font-weight:700;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;">${label}</label>
+       ${html}
+     </div>`;
+
+  const inp = (name, val, type='text', placeholder='') =>
+    `<input id="cx-${name}" type="${type}" value="${esc(val||'')}" placeholder="${placeholder}"
+      style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:5px;font-size:13px;box-sizing:border-box;">`;
+
+  const sel = (name, opts) =>
+    `<select id="cx-${name}" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:5px;font-size:13px;box-sizing:border-box;">
+       <option value="">— select —</option>${opts}
+     </select>`;
+
+  const ta = (name, val, placeholder) =>
+    `<textarea id="cx-${name}" rows="3" placeholder="${placeholder}"
+      style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:5px;font-size:13px;box-sizing:border-box;resize:vertical;">${esc(val||'')}</textarea>`;
+
+  document.getElementById('capex-modal-body').innerHTML = `
+    ${fld('Proposed Project', inp('proposed_project', p?.proposed_project, 'text', 'e.g. Cask line platform drip trays plus install'), true)}
+    ${fld('Amount ($)', inp('amount', p?.amount, 'number', '0'))}
+    ${fld('Strategic Pillar', sel('strategic_pillar', pillarOptions))}
+    ${fld('Type', sel('type', typeOptions))}
+    ${fld('Status', sel('status', statusOptions))}
+    ${fld('Contractor', inp('contractor', p?.contractor, 'text', 'e.g. JLE'))}
+    ${fld('ABH Project Manager', inp('abh_pm', p?.abh_pm, 'text', 'e.g. Ravi'))}
+    ${fld('Quotes Obtained', inp('quotes_obtained', p?.quotes_obtained, 'number', '0'))}
+    ${fld('Expected Completion', inp('expected_completion', p?.expected_completion, 'date', ''))}
+    ${fld('OneDrive Document Link', inp('onedrive_link', p?.onedrive_link, 'url', 'https://abhgroup.sharepoint.com/...'), true)}
+    ${fld('Notes', ta('notes', p?.notes, 'Additional context, lead times, approvals, etc.'), true)}
+    ${p ? `<div style="grid-column:1/-1;text-align:right;"><button class="btn" style="background:#FADBD8;color:#922B21;border:none;" onclick="deleteCapexProject(${p.id})">Delete Project</button></div>` : ''}
+  `;
+
+  document.getElementById('capex-modal').classList.add('open');
+}
+
+function closeCapexModal() {
+  document.getElementById('capex-modal').classList.remove('open');
+  _capexEditId = null;
+}
+
+async function saveCapexProject() {
+  const get = id => document.getElementById('cx-' + id);
+  const v = name => get(name)?.value?.trim() || null;
+
+  const project = v('proposed_project');
+  if (!project) { alert('Proposed Project is required.'); return; }
+
+  const payload = {
+    proposed_project:    project,
+    amount:              v('amount') ? parseFloat(v('amount')) : null,
+    strategic_pillar:    v('strategic_pillar'),
+    type:                v('type'),
+    status:              v('status') || 'Proposed',
+    contractor:          v('contractor'),
+    abh_pm:              v('abh_pm'),
+    quotes_obtained:     v('quotes_obtained') ? parseInt(v('quotes_obtained')) : 0,
+    expected_completion: v('expected_completion') || null,
+    onedrive_link:       v('onedrive_link'),
+    notes:               v('notes'),
+    updated_at:          new Date().toISOString()
+  };
+
+  try {
+    if (_capexEditId != null) {
+      const { error } = await sb.from(CAPEX_TABLE).update(payload).eq('id', _capexEditId);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from(CAPEX_TABLE).insert([payload]);
+      if (error) throw error;
+    }
+    closeCapexModal();
+    await loadCapexProjects();
+    _renderCapexView(document.getElementById('main'));
+  } catch(e) {
+    console.error('saveCapexProject failed:', e);
+    alert('Save failed: ' + (e.message || JSON.stringify(e)));
+  }
+}
+
+async function deleteCapexProject(id) {
+  if (!confirm('Delete this capex project? This cannot be undone.')) return;
+  try {
+    const { error } = await sb.from(CAPEX_TABLE).delete().eq('id', id);
+    if (error) throw error;
+    closeCapexModal();
+    await loadCapexProjects();
+    _renderCapexView(document.getElementById('main'));
+  } catch(e) {
+    console.error('deleteCapexProject failed:', e);
+    alert('Delete failed: ' + (e.message || JSON.stringify(e)));
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
