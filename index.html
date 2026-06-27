@@ -4690,10 +4690,10 @@ function openCapexModal(id) {
     ${fld('Type', sel('type', typeOptions))}
     ${fld('Status', sel('status', statusOptions))}
     ${fld('Contractor', inp('contractor', p?.contractor, 'text', 'e.g. JLE'))}
-    ${fld('ABH Project Manager', inp('abh_pm', p?.abh_pm, 'text', 'e.g. Ravi'))}
+    ${fld('ABH Project Manager', sel('abh_pm', '<option value="">— select —</option>' + TEAM.map(n => `<option value="${esc(n)}" ${p && p.abh_pm === n ? 'selected' : ''}>${esc(n)}</option>`).join('')))}
     ${fld('Quotes Obtained', inp('quotes_obtained', p?.quotes_obtained, 'number', '0'))}
     ${fld('Expected Completion', inp('expected_completion', p?.expected_completion, 'date', ''))}
-    ${fld('OneDrive Document Link', inp('onedrive_link', p?.onedrive_link, 'url', 'https://abhgroup.sharepoint.com/...'), true)}
+    ${fld('OneDrive Document Link', inp('onedrive_link', p?.onedrive_link, 'text', 'https://abhgroup.sharepoint.com/...'), true)}
     ${fld('Notes', ta('notes', p?.notes, 'Additional context, lead times, approvals, etc.'), true)}
     ${p ? `<div style="grid-column:1/-1;text-align:right;"><button class="btn" style="background:#FADBD8;color:#922B21;border:none;" onclick="deleteCapexProject(${p.id})">Delete Project</button></div>` : ''}
   `;
