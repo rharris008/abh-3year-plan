@@ -4602,9 +4602,10 @@ function _renderCapexView(main) {
   const tableRows = projects.length === 0
     ? `<tr><td colspan="10" style="text-align:center;padding:32px;color:#999;">No capex projects yet. Click Add Project to get started.</td></tr>`
     : projects.map(p => {
-        const docCell = p.onedrive_link
-          ? `<a href="${esc(p.onedrive_link)}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-weight:600;" title="${esc(p.onedrive_link)}">View &#8599;</a>`
-          : `<span style="color:#bbb;">—</span>`;
+        const qLinks = [p.onedrive_link, p.quote_2_link, p.quote_3_link]
+          .map((u, i) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-weight:600;margin-right:6px;" title="Quote ${i+1}">Q${i+1} &#8599;</a>` : '')
+          .join('');
+        const docCell = qLinks || `<span style="color:#bbb;">—</span>`;
         return `<tr style="cursor:pointer;" onclick="openCapexModal(${p.id})">
           <td style="font-weight:600;color:var(--navy);">${esc(p.proposed_project)}</td>
           <td class="num" style="font-weight:600;">${fmtAUD(p.amount)}</td>
@@ -4689,7 +4690,10 @@ function openCapexModal(id) {
     ${fld('ABH Project Manager', sel('abh_pm', '<option value="">— select —</option>' + TEAM.map(n => `<option value="${esc(n)}" ${p && p.abh_pm === n ? 'selected' : ''}>${esc(n)}</option>`).join('')))}
     ${fld('Quotes Obtained', inp('quotes_obtained', p?.quotes_obtained, 'number', '0'))}
     ${fld('Expected Completion', inp('expected_completion', p?.expected_completion, 'date', ''))}
-    ${fld('OneDrive Document Link', inp('onedrive_link', p?.onedrive_link, 'text', 'https://abhgroup.sharepoint.com/...'), true)}
+    ${fld('Quote 1 Link', inp('onedrive_link', p?.onedrive_link, 'text', 'https://noblebeverages-my.sharepoint.com/...'))}
+    ${fld('Quote 2 Link', inp('quote_2_link', p?.quote_2_link, 'text', 'https://noblebeverages-my.sharepoint.com/...'))}
+    ${fld('Quote 3 Link', inp('quote_3_link', p?.quote_3_link, 'text', 'https://noblebeverages-my.sharepoint.com/...'))}
+    <div></div>
     ${fld('Notes', ta('notes', p?.notes, 'Additional context, lead times, approvals, etc.'), true)}
     ${p ? `<div style="grid-column:1/-1;text-align:right;"><button class="btn" style="background:#FADBD8;color:#922B21;border:none;" onclick="deleteCapexProject(${p.id})">Delete Project</button></div>` : ''}
   `;
@@ -4720,6 +4724,8 @@ async function saveCapexProject() {
     quotes_obtained:     v('quotes_obtained') ? parseInt(v('quotes_obtained')) : 0,
     expected_completion: v('expected_completion') || null,
     onedrive_link:       v('onedrive_link'),
+    quote_2_link:        v('quote_2_link'),
+    quote_3_link:        v('quote_3_link'),
     notes:               v('notes'),
     updated_at:          new Date().toISOString()
   };
