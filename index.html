@@ -2067,7 +2067,7 @@ function daysUntilText(t) {
 // COUNTDOWN
 // ══════════════════════════════════════════════════════════════════════════════
 function updateCountdown() {
-  const target = new Date('2028-12-31');
+  const target = new Date('2029-06-30');
   const diff = Math.ceil((target - new Date()) / (1000*60*60*24));
   document.getElementById('countdown').textContent = `${diff.toLocaleString()} days to $150m target | 31/12/2028`;
 }
@@ -2581,11 +2581,11 @@ function renderView() {
 // ══════════════════════════════════════════════════════════════════════════════
 // REVENUE GOAL TRACKER (run-rate model)
 // ══════════════════════════════════════════════════════════════════════════════
-// Target: trailing 12-month Net Revenue of $150m at end of Dec 2028.
+// Target: trailing 12-month Net Revenue of $150m at end of Jun 2029 (FY29).
 // Source: kpi_monthly_forecast in Supabase (seeded from ABH 3 year plan.xlsx, Row 26 "Total - Income")
 // plus kpi_actuals (to be populated monthly from NetSuite via scraper).
 const REVENUE_GOAL = 150_000_000;
-const GOAL_END_YEAR_MONTH = '2028-12';
+const GOAL_END_YEAR_MONTH = '2029-06';
 
 // Will be populated by loadRevenueData() on init.
 let _forecastByMonth = {};   // { '2026-01': { net_revenue, data_type }, ... }
@@ -2636,15 +2636,15 @@ function fmtMoney(n) {
 function updateRevenueChip() {
   const el = document.getElementById('rev-chip');
   if (!el) return;
-  const forecastDec28 = computeTTM(GOAL_END_YEAR_MONTH);
-  const gap = REVENUE_GOAL - forecastDec28;
-  const pct = forecastDec28 / REVENUE_GOAL * 100;
-  const multiplier = forecastDec28 > 0 ? REVENUE_GOAL / forecastDec28 : 0;
+  const forecastJun29 = computeTTM(GOAL_END_YEAR_MONTH);
+  const gap = REVENUE_GOAL - forecastJun29;
+  const pct = forecastJun29 / REVENUE_GOAL * 100;
+  const multiplier = forecastJun29 > 0 ? REVENUE_GOAL / forecastJun29 : 0;
 
-  el.querySelector('.rev-chip-label').textContent = 'Dec 2028 TTM';
-  el.querySelector('.rev-chip-value').textContent = fmtMoney(forecastDec28) + ' / ' + fmtMoney(REVENUE_GOAL);
+  el.querySelector('.rev-chip-label').textContent = 'Jun 2029 TTM';
+  el.querySelector('.rev-chip-value').textContent = fmtMoney(forecastJun29) + ' / ' + fmtMoney(REVENUE_GOAL);
   el.title =
-    `Dec 2028 trailing 12-month forecast: ${fmtMoney(forecastDec28)}\n` +
+    `Jun 2029 trailing 12-month forecast: ${fmtMoney(forecastJun29)}\n` +
     `Target: ${fmtMoney(REVENUE_GOAL)}\n` +
     `Gap: ${fmtMoney(gap)} short\n` +
     `Progress: ${pct.toFixed(0)}%\n` +
@@ -2653,14 +2653,14 @@ function updateRevenueChip() {
 
 // Build the SVG thermometer showing forecast TTM vs $150m target
 function renderRevenueThermo() {
-  const forecastDec28 = computeTTM(GOAL_END_YEAR_MONTH);
-  const gap = REVENUE_GOAL - forecastDec28;
-  const pct = Math.min(100, forecastDec28 / REVENUE_GOAL * 100);
-  const multiplier = forecastDec28 > 0 ? REVENUE_GOAL / forecastDec28 : 0;
+  const forecastJun29 = computeTTM(GOAL_END_YEAR_MONTH);
+  const gap = REVENUE_GOAL - forecastJun29;
+  const pct = Math.min(100, forecastJun29 / REVENUE_GOAL * 100);
+  const multiplier = forecastJun29 > 0 ? REVENUE_GOAL / forecastJun29 : 0;
 
-  // Current Forecast Dec 26: calendar 2026 total = actuals where available (Jan-Mar) + forecast (Apr-Dec).
-  // computeTTM('2026-12') already returns the 12-month window ending Dec 26 and lets actuals override forecast.
-  const forecastDec26 = computeTTM('2026-12');
+  // Current Forecast Jun 27: FY27 total (Jul 26 - Jun 27) = actuals where available + forecast.
+  // computeTTM('2027-06') returns the 12-month window ending Jun 27 and lets actuals override forecast.
+  const forecastJun27 = computeTTM('2027-06');
 
   // SVG sizing
   const svgH = 180, svgW = 100;
@@ -2669,7 +2669,7 @@ function renderRevenueThermo() {
   const bulbCX = tubeX + tubeW / 2, bulbCY = tubeBot + 14, bulbR = 16;
   const tubeH = tubeBot - tubeTop;
 
-  const fillH = tubeH * (forecastDec28 / REVENUE_GOAL);
+  const fillH = tubeH * (forecastJun29 / REVENUE_GOAL);
   const fillY = tubeBot - fillH;
 
   // Tick marks at 0, 25, 50, 75, 100, 125, 150
@@ -2693,9 +2693,9 @@ function renderRevenueThermo() {
   return `
     <div class="rev-thermo-card">
       <div class="rt-left">
-        <div class="rt-title">Revenue to $150m Goal (Dec 2028 TTM)</div>
-        <div class="rt-headline">${fmtMoney(forecastDec28)} <span style="color:rgba(255,255,255,0.5);font-weight:normal;font-size:20px;"> / ${fmtMoney(REVENUE_GOAL)}</span></div>
-        <div class="rt-subline">Current boring-forecast trajectory at Dec 2028 TTM. Business needs ${multiplier.toFixed(1)}x this to hit goal.</div>
+        <div class="rt-title">Revenue to $150m Goal (Jun 2029 TTM)</div>
+        <div class="rt-headline">${fmtMoney(forecastJun29)} <span style="color:rgba(255,255,255,0.5);font-weight:normal;font-size:20px;"> / ${fmtMoney(REVENUE_GOAL)}</span></div>
+        <div class="rt-subline">Current boring-forecast trajectory at Jun 2029 TTM. Business needs ${multiplier.toFixed(1)}x this to hit goal.</div>
         <div class="rt-bars">
           <div class="rt-bar-row">
             <div class="rt-bar-label">Target</div>
@@ -2708,15 +2708,15 @@ function renderRevenueThermo() {
             <div class="rt-bar-value">${fmtMoney(gap)}</div>
           </div>
           <div class="rt-bar-row">
-            <div class="rt-bar-label">Current Forecast Dec 28</div>
+            <div class="rt-bar-label">Current Forecast Jun 29</div>
             <div class="rt-bar-track"><div class="rt-bar-fill forecast" style="width:${pct}%;"></div></div>
-            <div class="rt-bar-value">${fmtMoney(forecastDec28)}</div>
+            <div class="rt-bar-value">${fmtMoney(forecastJun29)}</div>
           </div>
-          ${forecastDec26 > 0 ? `
+          ${forecastJun27 > 0 ? `
           <div class="rt-bar-row">
-            <div class="rt-bar-label">Current Forecast Dec 26</div>
-            <div class="rt-bar-track"><div class="rt-bar-fill" style="width:${forecastDec26 / REVENUE_GOAL * 100}%;background:var(--blue);"></div></div>
-            <div class="rt-bar-value">${fmtMoney(forecastDec26)}</div>
+            <div class="rt-bar-label">Current Forecast Jun 27</div>
+            <div class="rt-bar-track"><div class="rt-bar-fill" style="width:${forecastJun27 / REVENUE_GOAL * 100}%;background:var(--blue);"></div></div>
+            <div class="rt-bar-value">${fmtMoney(forecastJun27)}</div>
           </div>` : ''}
         </div>
       </div>
