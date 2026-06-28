@@ -2069,7 +2069,7 @@ function daysUntilText(t) {
 function updateCountdown() {
   const target = new Date('2029-06-30');
   const diff = Math.ceil((target - new Date()) / (1000*60*60*24));
-  document.getElementById('countdown').textContent = `${diff.toLocaleString()} days to $150m target | 31/12/2028`;
+  document.getElementById('countdown').textContent = `${diff.toLocaleString()} days to $150m target | 30/06/2029`;
 }
 updateCountdown();
 
