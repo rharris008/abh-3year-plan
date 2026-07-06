@@ -3065,13 +3065,11 @@ function applyFilters() {
   const assignee = document.getElementById('f-assignee')?.value || '';
   const search = (document.getElementById('f-search')?.value || '').toLowerCase();
 
-  // Source of truth:
-  // - "Viewing as" = All (empty) + no assignee filter → show ALL tasks from everyone
-  // - "Viewing as" = specific person + no assignee filter → show strategic 3-year tasks only
-  // - Any assignee filter selected → show ALL tasks (filtered to that assignee)
-  // This way "All" in Viewing As means everyone's full workload, while individual views
-  // default to the 3-year strategic plan.
-  const sourceTasks = (assignee || !_personFilter) ? tasks : strategicTasks();
+  // All Tasks view always shows the full unfiltered task pool, regardless of "Viewing as".
+  // _allTasksRef.ref holds the pre-personFilter snapshot during a renderView() cycle;
+  // after restoreAllTasks() runs, `tasks` itself is already the full set.
+  // The assignee dropdown then narrows within that full set.
+  const sourceTasks = _allTasksRef.ref || tasks;
   const hideCompleted = document.getElementById('f-hide-completed')?.checked ?? true;
 
   let filtered = sourceTasks.filter(t => {
@@ -3094,11 +3092,8 @@ function applyFilters() {
     } else if (assignee === '__unassigned__') {
       noteEl.textContent = 'Showing unassigned tasks.';
       noteEl.style.display = 'block';
-    } else if (!_personFilter) {
-      noteEl.textContent = 'Showing all tasks from everyone. Select a person in "Viewing as" to see the 3-year strategic view.';
-      noteEl.style.display = 'block';
     } else {
-      noteEl.textContent = 'Showing 3-year strategic tasks only. Select a person in the Assignee filter to see their full workload.';
+      noteEl.textContent = 'Showing all tasks from everyone. Use the Assignee filter to narrow by person.';
       noteEl.style.display = 'block';
     }
   }
