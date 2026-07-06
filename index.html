@@ -2000,7 +2000,7 @@ const SEED_TASKS = [];
 let tasks = [];
 let dirty = false;
 let currentView = 'dashboard';
-let sortCol = null;
+let sortCol = 'dueDate';
 let sortAsc = true;
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3114,6 +3114,10 @@ function sortTasksInPlace(list) {
     }
     if (sortCol === 'dueDate') {
       va = va || '9999-99-99'; vb = vb || '9999-99-99';
+      if (va !== vb) return sortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1);
+      // Secondary sort: priority ascending when dates are equal
+      const priOrd = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3, none: 4 };
+      return (priOrd[a.priority] ?? 5) - (priOrd[b.priority] ?? 5);
     }
     if (sortCol === 'priority') {
       const priOrd = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3, none: 4 };
