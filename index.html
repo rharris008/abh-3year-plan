@@ -1436,9 +1436,8 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
           <select id="modal-priority">
             <option value="URGENT">Urgent</option>
             <option value="HIGH">High</option>
-            <option value="NORMAL">Normal</option>
+            <option value="NORMAL" selected>Normal</option>
             <option value="LOW">Low</option>
-            <option value="none">None</option>
           </select>
         </div>
       </div>
@@ -2237,7 +2236,7 @@ function taskToDbRow(t) {
     status: t.status || 'to do',
     content: t.content || '',
     assignees: t.assignees || [],
-    priority: t.priority || 'none',
+    priority: t.priority || 'NORMAL',
     latest_comment: t.latestComment || '',
     comment_count: t.commentCount || 0,
     due_date: t.dueDate || null,
@@ -2268,7 +2267,7 @@ function dbRowToTask(r) {
     status: r.status || 'to do',
     content: r.content || '',
     assignees: typeof r.assignees === 'string' ? JSON.parse(r.assignees || '[]') : (r.assignees || []),
-    priority: r.priority || 'none',
+    priority: r.priority || 'NORMAL',
     latestComment: r.latest_comment || '',
     commentCount: r.comment_count || 0,
     dueDate: r.due_date || null,
@@ -3003,7 +3002,7 @@ function renderTaskList(main) {
       </select>
       <select id="f-priority" onchange="applyFilters()">
         <option value="">All Priorities</option>
-        <option>URGENT</option><option>HIGH</option><option>NORMAL</option><option>LOW</option><option>none</option>
+        <option>URGENT</option><option>HIGH</option><option>NORMAL</option><option>LOW</option>
       </select>
       <select id="f-assignee" onchange="applyFilters()"><option value="">All Assignees</option></select>
       <input type="text" id="f-search" placeholder="Search tasks..." oninput="applyFilters()">
