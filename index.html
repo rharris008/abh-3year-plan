@@ -2776,8 +2776,12 @@ function resetQuarterToCurrent() {
 // DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════════
 function renderDashboard(main) {
-  // Dashboard only shows the 3-Year Strategic Plan tasks, not team to-do boards.
-  const tasks = strategicTasks();
+  // Dashboard shows ALL 3-Year Strategic Plan tasks regardless of the "Viewing as" person filter.
+  // renderView() person-filters the global `tasks` array before calling any render function,
+  // but the dashboard is a whole-plan overview — it must use the pre-filter list.
+  // _allTasksRef.ref holds that list while inside renderView(); fall back to global if called directly.
+  const _srcTasks = _allTasksRef.ref || tasks;
+  const tasks = _srcTasks.filter(isStrategic);
   const total = tasks.length;
   const inProg = tasks.filter(t => t.status === 'in progress').length;
   const toDo = tasks.filter(t => t.status === 'to do').length;
@@ -3314,7 +3318,9 @@ function applyFilteredListToggle() {
 // ══════════════════════════════════════════════════════════════════════════════
 function renderPillars(main) {
   // Pillars only apply to strategic tasks (team to-do boards are excluded).
-  const tasks = strategicTasks();
+  // Use pre-person-filter list so all strategic tasks are counted, not just the viewer's.
+  const _srcTasks = _allTasksRef.ref || tasks;
+  const tasks = _srcTasks.filter(isStrategic);
   const stats = {};
   PILLARS.forEach(p => stats[p] = { total: 0, complete: 0, inProgress: 0, overdue: 0, todo: 0 });
   let unassigned = 0;
