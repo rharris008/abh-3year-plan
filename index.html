@@ -3106,7 +3106,15 @@ function applyFilters() {
 }
 
 function sortTasksInPlace(list) {
-  if (!sortCol) return list;
+  if (!sortCol) {
+    const priOrd = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3, none: 4 };
+    return list.slice().sort((a, b) => {
+      const da = a.dueDate || '9999-99-99';
+      const db = b.dueDate || '9999-99-99';
+      if (da !== db) return da < db ? -1 : 1;
+      return (priOrd[a.priority] ?? 5) - (priOrd[b.priority] ?? 5);
+    });
+  }
   return list.slice().sort((a,b) => {
     let va, vb;
     if (sortCol === 'responsible') {
