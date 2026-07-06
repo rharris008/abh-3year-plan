@@ -1623,7 +1623,7 @@ const TEAM_FALLBACK = [
   'Aaron Mattin', 'Anthony Rose', 'Issareeya Yeeka', 'Jasmine Pereira',
   'Jay Curds', 'Jeremy Wheeler', 'Kate Harris', 'Lisa Fontanot',
   'Maral Movsessian', 'Phil Mann', 'Ravin Singh', 'Richard Carlick',
-  'Robert Harris', 'Sharon Salt',
+  'Rob Harris', 'Sharon Salt',
 ];
 
 // loadTeamFromSupabase() hydrates this on boot. Empty array until then.
@@ -1726,12 +1726,12 @@ let TEAMS = {
   },
   finance: {
     label: 'Finance',
-    members: ['Lisa Fontanot', 'Sharon Salt', 'Issareeya Yeeka', 'Robert Harris'],
+    members: ['Lisa Fontanot', 'Sharon Salt', 'Issareeya Yeeka', 'Rob Harris'],
     spaces: ['Finance Task reallocations', 'Finance Team ongoing efficiency', 'Month end reminders'],
   },
   gsd: {
     label: 'Rob & Richard',
-    members: ['Robert Harris', 'Richard Carlick'],
+    members: ['Rob Harris', 'Richard Carlick'],
     spaces: ['Getting Shit done'],
   },
   personal: {
@@ -2172,9 +2172,9 @@ function saveToLocal() {
 // Aliases for legacy / short / case variants → canonical TEAM names
 const NAME_ALIASES = {
   'kate': 'Kate Harris',
-  'rob': 'Robert Harris',
-  'rob harris': 'Robert Harris',
-  'robert': 'Robert Harris',
+  'rob': 'Rob Harris',
+  'rob harris': 'Rob Harris',
+  'robert': 'Rob Harris',
   'ravin': 'Ravin Singh',
   'ravin singh': 'Ravin Singh',
   'sharon': 'Sharon Salt',
@@ -2414,10 +2414,10 @@ async function initData() {
 // ══════════════════════════════════════════════════════════════════════════════
 // PERSON FILTER (header dropdown — "Viewing as" lens applied across views)
 // ══════════════════════════════════════════════════════════════════════════════
-// Default to Robert Harris so My Tasks loads immediately without needing
+// Default to Rob Harris so My Tasks loads immediately without needing
 // the user to manually select a name from the dropdown. "All" remains
 // available as a dropdown option.
-let _personFilter = 'Robert Harris';
+let _personFilter = 'Rob Harris';
 const _allTasksRef = { ref: null };
 
 function populatePersonFilter() {
@@ -2546,14 +2546,14 @@ function renderView() {
         if (!teamHasAccess('gsd')) { renderTeamBlocked(main, 'gsd'); break; }
         renderFilteredList(main, 'Rob & Richard', t => {
           const a = getAccountable(t), r = getResponsible(t);
-          return ['Robert Harris', 'Richard Carlick'].includes(a) || ['Robert Harris', 'Richard Carlick'].includes(r);
+          return ['Rob Harris', 'Richard Carlick'].includes(a) || ['Rob Harris', 'Richard Carlick'].includes(r);
         });
         break;
       case 'finance':
         if (!teamHasAccess('finance')) { renderTeamBlocked(main, 'finance'); break; }
         renderFilteredList(main, 'Finance Tasks', t => {
           const a = getAccountable(t), r = getResponsible(t);
-          const finMembers = ['Lisa Fontanot', 'Sharon Salt', 'Issareeya Yeeka', 'Robert Harris'];
+          const finMembers = ['Lisa Fontanot', 'Sharon Salt', 'Issareeya Yeeka', 'Rob Harris'];
           return finMembers.includes(a) || finMembers.includes(r);
         });
         break;
@@ -4257,7 +4257,7 @@ function saveTask() {
     data.dateUpdated = new Date().toISOString().slice(0,10);
     data.dateClosed = null;
     data.dateDone = null;
-    data.createdBy = 'Robert Harris';
+    data.createdBy = 'Rob Harris';
     data.folder = '';
     tasks.push(data);
   }
