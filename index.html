@@ -4613,6 +4613,40 @@ function _renderCapexView(main) {
   }).join('')}
 </div>`;
 
+  // Monthly cashflow pills - Aug 2026 to Jan 2027 (Proposed / For Board Approval / Approved only)
+  const CASHFLOW_MONTHS = [
+    {yr:2026, mo:7,  label:'Aug 2026'},
+    {yr:2026, mo:8,  label:'Sep 2026'},
+    {yr:2026, mo:9,  label:'Oct 2026'},
+    {yr:2026, mo:10, label:'Nov 2026'},
+    {yr:2026, mo:11, label:'Dec 2026'},
+    {yr:2027, mo:0,  label:'Jan 2027'},
+  ];
+  const activeForCashflow = projects.filter(p => ['Proposed','For Board Approval','Approved'].includes(p.status));
+  const monthlyData = CASHFLOW_MONTHS.map(({yr, mo, label}) => {
+    const mp = activeForCashflow.filter(p => {
+      if (!p.expected_completion) return false;
+      const d = new Date(p.expected_completion + 'T12:00:00');
+      return d.getFullYear() === yr && d.getMonth() === mo;
+    });
+    return { label, count: mp.length, total: mp.reduce((s,p) => s+(parseFloat(p.amount)||0), 0) };
+  });
+
+  const monthlyHtml = `
+<div style="margin-bottom:24px;">
+  <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Potential Expenditure by Month (Proposed / For Board Approval / Approved)</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    ${monthlyData.map(({label, count, total}) => {
+      const hasValue = count > 0;
+      return `<div style="flex:1;min-width:110px;background:${hasValue ? '#EAF4FB' : '#F8F9FA'};border:1px solid ${hasValue ? '#AED6F1' : '#dde3f0'};border-radius:8px;padding:14px 18px;">
+        <div style="font-size:11px;font-weight:700;color:${hasValue ? '#1A5276' : '#aaa'};text-transform:uppercase;letter-spacing:.5px;">${label}</div>
+        <div style="font-size:22px;font-weight:bold;color:${hasValue ? '#1A5276' : '#ccc'};margin-top:4px;">${count || '—'}</div>
+        <div style="font-size:13px;font-weight:600;color:${hasValue ? '#1A5276' : '#ccc'};margin-top:2px;">${hasValue ? fmtAUD(total) : '—'}</div>
+      </div>`;
+    }).join('')}
+  </div>
+</div>`;
+
   // Table
   const tableRows = projects.length === 0
     ? `<tr><td colspan="10" style="text-align:center;padding:32px;color:#999;">No capex projects yet. Click Add Project to get started.</td></tr>`
@@ -4646,6 +4680,8 @@ function _renderCapexView(main) {
   </div>
 
   ${tileHtml}
+
+  ${monthlyHtml}
 
   <div style="overflow-x:auto;">
     <table class="task-table" style="width:100%;min-width:900px;">
