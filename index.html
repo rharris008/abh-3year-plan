@@ -2002,6 +2002,8 @@ let dirty = false;
 let currentView = 'dashboard';
 let sortCol = 'dueDate';
 let sortAsc = true;
+let capexSortCol = 'expected_completion';
+let capexSortAsc = true;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DATE HELPERS
@@ -3285,6 +3287,34 @@ function sortTable(col) {
   } else {
     renderView();
   }
+}
+
+function sortCapex(col) {
+  if (capexSortCol === col) {
+    capexSortAsc = !capexSortAsc;
+  } else {
+    capexSortCol = col;
+    capexSortAsc = true;
+  }
+  _renderCapexView(document.getElementById('main'));
+}
+
+function sortCapexProjects(list) {
+  const numericCols = new Set(['amount', 'quotes_obtained']);
+  return list.slice().sort((a, b) => {
+    let va = a[capexSortCol] != null ? a[capexSortCol] : '';
+    let vb = b[capexSortCol] != null ? b[capexSortCol] : '';
+    if (numericCols.has(capexSortCol)) {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return capexSortAsc ? va - vb : vb - va;
+    }
+    va = String(va).toLowerCase();
+    vb = String(vb).toLowerCase();
+    if (va < vb) return capexSortAsc ? -1 : 1;
+    if (va > vb) return capexSortAsc ? 1 : -1;
+    return 0;
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -4585,7 +4615,7 @@ async function renderCapex(main) {
 }
 
 function _renderCapexView(main) {
-  const projects = _capexProjects;
+  const projects = sortCapexProjects(_capexProjects);
 
   // Summary tiles
   const totalAll      = projects.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
@@ -4679,15 +4709,22 @@ function _renderCapexView(main) {
   <div style="overflow-x:auto;">
     <table class="task-table" style="width:100%;min-width:900px;">
       <thead><tr>
-        <th style="min-width:200px;">Proposed Project</th>
-        <th class="num">Amount</th>
-        <th>Strategic Pillar</th>
-        <th>Type</th>
-        <th>Status</th>
-        <th>Contractor</th>
-        <th>ABH PM</th>
-        <th class="num">Quotes</th>
-        <th>Completion</th>
+        ${[
+          ['proposed_project','Proposed Project','min-width:200px;'],
+          ['amount','Amount','text-align:right;'],
+          ['strategic_pillar','Strategic Pillar',''],
+          ['type','Type',''],
+          ['status','Status',''],
+          ['contractor','Contractor',''],
+          ['abh_pm','ABH PM',''],
+          ['quotes_obtained','Quotes','text-align:right;'],
+          ['expected_completion','Completion','']
+        ].map(([col, label, extraStyle]) => {
+          const active = capexSortCol === col;
+          const arrow  = active ? (capexSortAsc ? ' ▲' : ' ▼') : '';
+          const cursor = 'cursor:pointer;user-select:none;';
+          return `<th onclick="sortCapex('${col}')" style="${cursor}${extraStyle}" title="Sort by ${label}">${label}<span class="sort-arrow">${arrow}</span></th>`;
+        }).join('')}
         <th>Document</th>
       </tr></thead>
       <tbody>${tableRows}</tbody>
