@@ -4532,7 +4532,7 @@ function renderProjects(main) {
 // ══════════════════════════════════════════════════════════════════════════════
 const CAPEX_TABLE = 'capex_projects';
 
-const CAPEX_STATUSES = ['Proposed', 'For Board Approval', 'Approved', 'Deferred', 'Rejected'];
+const CAPEX_STATUSES = ['Proposed', 'For Board Approval', 'Approved', 'Deferred', 'Completed', 'Rejected'];
 const CAPEX_TYPES    = ['Reduces Risk', 'Increases Cash'];
 
 const CAPEX_STATUS_STYLE = {
@@ -4540,6 +4540,7 @@ const CAPEX_STATUS_STYLE = {
   'For Board Approval': { bg: '#FEF9E7', color: '#7D6608' },
   'Approved':           { bg: '#D5F5E3', color: '#1E8449' },
   'Deferred':           { bg: '#F2F3F4', color: '#626567' },
+  'Completed':          { bg: '#D1F2EB', color: '#0E6655' },
   'Rejected':           { bg: '#FADBD8', color: '#922B21' }
 };
 const CAPEX_TYPE_STYLE = {
@@ -4587,26 +4588,27 @@ function _renderCapexView(main) {
   const projects = _capexProjects;
 
   // Summary tiles
-  const totalApproved = projects.filter(p => p.status === 'Approved').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
   const totalAll      = projects.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
   const countByStatus = {};
-  CAPEX_STATUSES.forEach(s => { countByStatus[s] = projects.filter(p => p.status === s).length; });
+  const amtByStatus   = {};
+  CAPEX_STATUSES.forEach(s => {
+    countByStatus[s] = projects.filter(p => p.status === s).length;
+    amtByStatus[s]   = projects.filter(p => p.status === s).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  });
 
   const tileHtml = `
 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
   <div style="flex:1;min-width:140px;background:#fff;border:1px solid #dde3f0;border-radius:8px;padding:14px 18px;">
     <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Total Submitted</div>
-    <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-top:4px;">${fmtAUD(totalAll)}</div>
-  </div>
-  <div style="flex:1;min-width:140px;background:#fff;border:1px solid #dde3f0;border-radius:8px;padding:14px 18px;">
-    <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Approved</div>
-    <div style="font-size:22px;font-weight:bold;color:var(--green);margin-top:4px;">${fmtAUD(totalApproved)}</div>
+    <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-top:4px;">${projects.length}</div>
+    <div style="font-size:13px;font-weight:600;color:var(--navy);margin-top:2px;">${fmtAUD(totalAll)}</div>
   </div>
   ${CAPEX_STATUSES.map(st => {
     const s = CAPEX_STATUS_STYLE[st] || {};
     return `<div style="flex:1;min-width:110px;background:${s.bg || '#f5f5f5'};border:1px solid #dde3f0;border-radius:8px;padding:14px 18px;">
       <div style="font-size:11px;font-weight:600;color:${s.color || '#333'};text-transform:uppercase;letter-spacing:.5px;">${st}</div>
       <div style="font-size:22px;font-weight:bold;color:${s.color || '#333'};margin-top:4px;">${countByStatus[st]}</div>
+      <div style="font-size:13px;font-weight:600;color:${s.color || '#333'};margin-top:2px;">${fmtAUD(amtByStatus[st])}</div>
     </div>`;
   }).join('')}
 </div>`;
