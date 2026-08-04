@@ -4613,28 +4613,21 @@ function _renderCapexView(main) {
   }).join('')}
 </div>`;
 
-  // Monthly cashflow pills - Aug 2026 to Jan 2027 (Proposed / For Board Approval / Approved only)
-  const CASHFLOW_MONTHS = [
-    {yr:2026, mo:7,  label:'Aug 2026'},
-    {yr:2026, mo:8,  label:'Sep 2026'},
-    {yr:2026, mo:9,  label:'Oct 2026'},
-    {yr:2026, mo:10, label:'Nov 2026'},
-    {yr:2026, mo:11, label:'Dec 2026'},
-    {yr:2027, mo:0,  label:'Jan 2027'},
-  ];
-  const activeForCashflow = projects.filter(p => ['Proposed','For Board Approval','Approved'].includes(p.status));
-  const monthlyData = CASHFLOW_MONTHS.map(({yr, mo, label}) => {
-    const mp = activeForCashflow.filter(p => {
-      if (!p.expected_completion) return false;
-      const d = new Date(p.expected_completion + 'T12:00:00');
-      return d.getFullYear() === yr && d.getMonth() === mo;
-    });
-    return { label, count: mp.length, total: mp.reduce((s,p) => s+(parseFloat(p.amount)||0), 0) };
+  // Monthly cashflow pills — 7 months from current month (Proposed / For Board Approval / Approved / Deferred)
+  // SA-8 "always" check DISABLED — Rob approved 06/07/2026
+  const _MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const _activeStatuses = new Set(['Proposed','For Board Approval','Approved','Deferred']);
+  const _now = new Date();
+  const monthlyData = Array.from({length:7}, (_,i) => {
+    const d   = new Date(_now.getFullYear(), _now.getMonth() + i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const mp  = projects.filter(p => _activeStatuses.has(p.status) && p.expected_completion && p.expected_completion.startsWith(key));
+    return { label: `${_MN[d.getMonth()]} ${d.getFullYear()}`, count: mp.length, total: mp.reduce((s,p) => s+(parseFloat(p.amount)||0), 0) };
   });
 
   const monthlyHtml = `
 <div style="margin-bottom:24px;">
-  <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Potential Expenditure by Month (Proposed / For Board Approval / Approved)</div>
+  <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Potential Expenditure by Month (Proposed / For Board Approval / Approved / Deferred)</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;">
     ${monthlyData.map(({label, count, total}) => {
       const hasValue = count > 0;
