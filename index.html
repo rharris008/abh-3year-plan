@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3 Year Plan - $150m Turnover Goal</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.87.3/dist/umd/supabase.js"></script>
 <style>
 /* ══ ABH BRAND TOKENS ════════════════════════════════════════════════════════ */
 :root {
@@ -2122,6 +2122,7 @@ function markError(msg) {
 // the cloud write fails, so the user knows to click retry.
 let _autoSaveInFlight = false;
 let _autoSavePending = false;
+let _lastSyncError = null;
 async function autoSaveToCloud(successMessage) {
   if (_autoSaveInFlight) {
     // Coalesce rapid-fire changes into a single trailing save
@@ -2137,7 +2138,7 @@ async function autoSaveToCloud(successMessage) {
       if (successMessage) toast(successMessage);
     } else {
       markError('Cloud save failed — local copy is safe, click to retry');
-      toast('Saved locally, cloud sync failed', 'error');
+      toast('Saved locally, cloud sync failed' + (_lastSyncError ? ` (${_lastSyncError.code || _lastSyncError.message || 'unknown'})` : ''), 'error');
     }
   } catch (e) {
     console.error('autoSaveToCloud exception', e);
@@ -2304,7 +2305,7 @@ async function saveToSupabase() {
       const retry = await sb.from(SB_TABLE).upsert(tasks.map(taskToDbRow), { onConflict: 'id' });
       upErr = retry.error;
     }
-    if (upErr) { console.error('Supabase upsert error:', upErr); return false; }
+    if (upErr) { console.error('Supabase upsert error:', upErr); _lastSyncError = upErr; return false; }
     // Diff-delete: remove any cloud row whose id is no longer in local tasks
     const { data: cloudRows, error: selErr } = await sb.from(SB_TABLE).select('id');
     if (selErr) { console.warn('Supabase select-for-diff error:', selErr); return true; }
@@ -2316,7 +2317,7 @@ async function saveToSupabase() {
       console.log(`[sync] removed ${staleIds.length} stale rows from cloud`);
     }
     return true;
-  } catch(e) { console.error('Supabase save exception:', e); return false; }
+  } catch(e) { console.error('Supabase save exception:', e); _lastSyncError = e; return false; }
 }
 
 async function loadFromSupabase() {
@@ -4036,7 +4037,7 @@ async function checkSupabase() {
   const el = document.getElementById('sb-status');
   if (!el) return;
   if (!sb) {
-    el.innerHTML = '<span style="color:var(--amber);">Supabase client not initialised. Data is stored locally only.</span>';
+    el.innerHTML = '<span style="color:var(--amber);">Supabase client not initialised. The supabase-js library did not load. Data is stored locally only.</span>';
     return;
   }
   try {
