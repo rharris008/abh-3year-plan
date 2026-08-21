@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3 Year Plan - $150m Turnover Goal</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.87.3/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ══ ABH BRAND TOKENS ════════════════════════════════════════════════════════ */
 :root {
@@ -2290,43 +2290,73 @@ function dbRowToTask(r) {
   };
 }
 
-async function saveToSupabase() {
-  if (!sb) return false;
-  try {
-    // Upsert current local state
-    let { error: upErr } = await sb.from(SB_TABLE).upsert(
-      tasks.map(taskToDbRow),
-      { onConflict: 'id' }
-    );
-    // If the recurrence column is missing (42703), retry once without it
-    if (upErr && (upErr.code === '42703' || (upErr.message || '').includes('recurrence'))) {
-      console.warn('recurrence column missing in Supabase, retrying without it. Run abh_3year_tasks_recurrence.sql in the SQL editor.');
-      _recurrenceColumnMissing = true;
-      const retry = await sb.from(SB_TABLE).upsert(tasks.map(taskToDbRow), { onConflict: 'id' });
-      upErr = retry.error;
+// Raw Supabase REST helper — works even when supabase-js CDN fails to load.
+// All task sync operations use this so the library is never a single point of failure.
+async function _sbFetch(path, opts) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...(opts || {}),
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      ...((opts && opts.headers) || {})
     }
-    if (upErr) { console.error('Supabase upsert error:', upErr); _lastSyncError = upErr; return false; }
-    // Diff-delete: remove any cloud row whose id is no longer in local tasks
-    const { data: cloudRows, error: selErr } = await sb.from(SB_TABLE).select('id');
-    if (selErr) { console.warn('Supabase select-for-diff error:', selErr); return true; }
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let body = {};
+    try { body = JSON.parse(text); } catch(e) {}
+    const err = new Error(body.message || `HTTP ${res.status}`);
+    err.code = body.code; err.status = res.status;
+    throw err;
+  }
+  if (!text || text === 'null' || text === '') return null;
+  try { return JSON.parse(text); } catch(e) { return null; }
+}
+
+async function saveToSupabase() {
+  try {
+    const rows = tasks.map(taskToDbRow);
+    // Upsert via raw fetch — bypasses supabase-js library version issues
+    await _sbFetch(SB_TABLE, {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows)
+    });
+    // Diff-delete: remove cloud rows no longer in local tasks
+    const cloudRows = await _sbFetch(`${SB_TABLE}?select=id`);
     const localIds = new Set(tasks.map(t => t.id));
     const staleIds = (cloudRows || []).map(r => r.id).filter(id => !localIds.has(id));
     if (staleIds.length > 0) {
-      const { error: delErr } = await sb.from(SB_TABLE).delete().in('id', staleIds);
-      if (delErr) { console.error('Supabase delete error:', delErr); return false; }
+      const idList = staleIds.map(id => `"${String(id).replace(/"/g,'')}"` ).join(',');
+      await _sbFetch(`${SB_TABLE}?id=in.(${idList})`, { method: 'DELETE' });
       console.log(`[sync] removed ${staleIds.length} stale rows from cloud`);
     }
     return true;
-  } catch(e) { console.error('Supabase save exception:', e); _lastSyncError = e; return false; }
+  } catch(e) {
+    console.error('saveToSupabase error:', e);
+    _lastSyncError = e;
+    return false;
+  }
 }
 
 async function loadFromSupabase() {
-  if (!sb) return null;
   try {
-    const { data, error } = await sb.from(SB_TABLE).select('*');
-    if (error || !data || data.length === 0) return null;
+    // Use supabase-js if available, otherwise raw fetch
+    let data;
+    if (sb) {
+      const result = await sb.from(SB_TABLE).select('*');
+      if (result.error) throw result.error;
+      data = result.data;
+    } else {
+      data = await _sbFetch(`${SB_TABLE}?select=*`);
+    }
+    if (!data || data.length === 0) return null;
     return data.map(dbRowToTask);
-  } catch(e) { return null; }
+  } catch(e) {
+    console.error('loadFromSupabase error:', e);
+    return null;
+  }
 }
 
 function loadFromLocal() {
