@@ -1418,6 +1418,9 @@ th .sort-arrow { font-size: 10px; margin-left: 4px; }
       <label>Pillar</label>
       <select id="modal-pillar"></select>
 
+      <label>Capex Project <span style="color:#999;font-weight:normal;font-size:11px;">link to capital investment</span></label>
+      <select id="modal-capex-project"></select>
+
       <select id="modal-space" style="display:none"></select>
 
       <div style="display:flex;gap:12px;">
@@ -2158,7 +2161,7 @@ async function autoSaveToCloud(successMessage) {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-05-22-team-fix-v16';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-09-16-capex-fk-v17';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 // Team cache version — bump to flush stale abh3y_team from localStorage.
 // Prevents an old (empty or wrong-cased) team list overriding Supabase data.
@@ -2255,6 +2258,7 @@ function taskToDbRow(t) {
     pillar: t.pillar || null,
     parent_id: t.parentId || null,
     parent_name: t.parentName || null,
+    capex_project_id: t.capexProjectId != null ? parseInt(t.capexProjectId) : null,
   };
   // Only include the recurrence column if Supabase has it. Defensive because the
   // column was added late and some databases may not have been migrated yet.
@@ -2287,6 +2291,7 @@ function dbRowToTask(r) {
     parentId: r.parent_id || null,
     parentName: r.parent_name || '',
     recurrence: r.recurrence || null,
+    capexProjectId: r.capex_project_id != null ? parseInt(r.capex_project_id) : null,
   };
 }
 
@@ -2425,6 +2430,7 @@ async function initData() {
   // Backfill pillars on any task missing one (safety net for legacy data)
   backfillPillars();
   populatePersonFilter();
+  await loadCapexProjects();
   await loadShedMilestones();
   await loadRevenueData();
   updateRevenueChip();
@@ -3196,14 +3202,19 @@ function renderTable(data, container) {
     <th onclick="sortTable('dueDate')">Due Date${arrow('dueDate')}</th>
     <th onclick="sortTable('dueDate')">Days${arrow('dueDate')}</th>
     <th onclick="sortTable('pillar')">Pillar${arrow('pillar')}</th>
+    <th>Capex</th>
   </tr></thead><tbody>`;
 
   if (data.length === 0) {
-    html += '<tr><td colspan="8" style="text-align:center;padding:20px;color:#999;">No tasks match filters</td></tr>';
+    html += '<tr><td colspan="9" style="text-align:center;padding:20px;color:#999;">No tasks match filters</td></tr>';
   }
 
   data.forEach(t => {
     const priClass = `priority-${t.priority.toLowerCase()}`;
+    const capexProj = t.capexProjectId != null ? _capexProjects.find(p => p.id === t.capexProjectId) : null;
+    const capexCell = capexProj
+      ? `<span style="font-size:11px;color:var(--navy);font-weight:600;">${esc(capexProj.proposed_project)}</span><br><span style="font-size:10px;color:#666;">${fmtAUD(capexProj.amount)}</span>`
+      : '<span style="color:#bbb;">—</span>';
     html += `<tr onclick="openModal('${t.id}')">
       <td class="task-name-cell" title="${esc(getTaskDisplayName(t))}">${esc(getTaskDisplayName(t))}</td>
       <td class="col-r">${nameCell(getResponsible(t), 'r')}</td>
@@ -3213,6 +3224,7 @@ function renderTable(data, container) {
       <td style="font-size:12px;">${fmtDate(t.dueDate)}</td>
       <td>${daysUntilText(t)}</td>
       <td style="font-size:11px;">${t.pillar ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:${PILLAR_COLOURS[t.pillar] || '#999'};color:#fff;font-weight:bold;font-size:10px;">${esc(t.pillar)}</span>` : '<span style="color:#bbb;">-</span>'}</td>
+      <td style="font-size:11px;min-width:130px;">${capexCell}</td>
     </tr>`;
   });
 
@@ -4190,6 +4202,11 @@ async function openModal(taskId) {
   const pillarSelect = document.getElementById('modal-pillar');
   pillarSelect.innerHTML = '<option value="">(unassigned)</option>' + PILLARS.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
 
+  // Populate capex project dropdown from already-loaded _capexProjects array
+  const capexSelect = document.getElementById('modal-capex-project');
+  capexSelect.innerHTML = '<option value="">— No capex link —</option>' +
+    _capexProjects.map(p => `<option value="${p.id}">${esc(p.proposed_project)} (${fmtAUD(p.amount)})</option>`).join('');
+
   // Space field is defunct (ClickUp carry-over) — kept hidden in DOM for Supabase mapping only
   const spaceSelect = document.getElementById('modal-space');
   if (spaceSelect && typeof SPACES !== 'undefined') {
@@ -4217,6 +4234,7 @@ async function openModal(taskId) {
     document.getElementById('modal-task-id').value = task.id;
     document.getElementById('modal-name').value = task.name;
     document.getElementById('modal-pillar').value = task.pillar || '';
+    document.getElementById('modal-capex-project').value = task.capexProjectId != null ? String(task.capexProjectId) : '';
     document.getElementById('modal-space').value = task.space;
     document.getElementById('modal-status').value = task.status;
     document.getElementById('modal-priority').value = task.priority;
@@ -4239,6 +4257,7 @@ async function openModal(taskId) {
     document.getElementById('modal-task-id').value = '';
     document.getElementById('modal-name').value = '';
     document.getElementById('modal-pillar').value = '';
+    document.getElementById('modal-capex-project').value = '';
     document.getElementById('modal-space').value = SPACES[0];
     document.getElementById('modal-status').value = 'to do';
     document.getElementById('modal-priority').value = 'NORMAL';
@@ -4298,9 +4317,11 @@ function saveTask() {
   const dueVal = document.getElementById('modal-due').value;
   const startVal = document.getElementById('modal-start').value;
 
+  const capexVal = document.getElementById('modal-capex-project').value;
   const data = {
     name,
     pillar: document.getElementById('modal-pillar').value || null,
+    capexProjectId: capexVal ? parseInt(capexVal) : null,
     space: document.getElementById('modal-space').value,
     status: document.getElementById('modal-status').value,
     priority: document.getElementById('modal-priority').value,
