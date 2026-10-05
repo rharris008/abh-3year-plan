@@ -2235,6 +2235,7 @@ function normaliseTaskAssignees(t) {
 // Prevents repeated 400s on every save. Clears on reload, so once Rob runs the
 // ALTER TABLE SQL the flag flips back to false and recurrence starts persisting.
 let _recurrenceColumnMissing = false;
+let _capexColumnMissing = false;
 
 function taskToDbRow(t) {
   const row = {
@@ -2258,8 +2259,11 @@ function taskToDbRow(t) {
     pillar: t.pillar || null,
     parent_id: t.parentId || null,
     parent_name: t.parentName || null,
-    capex_project_id: t.capexProjectId != null ? parseInt(t.capexProjectId) : null,
   };
+  // Same defence for capex_project_id: omit it if the migration hasn't run on this database.
+  if (!_capexColumnMissing) {
+    row.capex_project_id = t.capexProjectId != null ? parseInt(t.capexProjectId) : null;
+  }
   // Only include the recurrence column if Supabase has it. Defensive because the
   // column was added late and some databases may not have been migrated yet.
   if (!_recurrenceColumnMissing) {
@@ -2321,13 +2325,18 @@ async function _sbFetch(path, opts) {
 
 async function saveToSupabase() {
   try {
-    const rows = tasks.map(taskToDbRow);
     // Upsert via raw fetch — bypasses supabase-js library version issues
-    await _sbFetch(SB_TABLE, {
+    const upsert = () => _sbFetch(SB_TABLE, {
       method: 'POST',
       headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(rows)
+      body: JSON.stringify(tasks.map(taskToDbRow))
     });
+    try {
+      await upsert();
+    } catch(e) {
+      if (!(await _recoverFromUpsertError(e))) throw e;
+      await upsert();   // one retry after recovery
+    }
     // Diff-delete: remove cloud rows no longer in local tasks
     const cloudRows = await _sbFetch(`${SB_TABLE}?select=id`);
     const localIds = new Set(tasks.map(t => t.id));
@@ -2343,6 +2352,31 @@ async function saveToSupabase() {
     _lastSyncError = e;
     return false;
   }
+}
+
+// Handles the two upsert failures we can self-heal, then lets saveToSupabase retry once:
+//  - PGRST204: a column we send doesn't exist yet (migration not run) → stop sending it
+//  - 23503:    a task points at a capex project that was deleted elsewhere → clear stale links
+async function _recoverFromUpsertError(e) {
+  const msg = (e && e.message) || '';
+  if (e && e.code === 'PGRST204') {
+    if (msg.includes('capex_project_id') && !_capexColumnMissing) { _capexColumnMissing = true; return true; }
+    if (msg.includes('recurrence') && !_recurrenceColumnMissing) { _recurrenceColumnMissing = true; return true; }
+    return false;
+  }
+  if (e && e.code === '23503' && msg.includes('capex')) {
+    if (!(await loadCapexProjects())) return false;   // can't tell which ids are stale
+    const validIds = new Set(_capexProjects.map(p => p.id));
+    let cleared = 0;
+    tasks.forEach(t => {
+      if (t.capexProjectId != null && !validIds.has(t.capexProjectId)) { t.capexProjectId = null; cleared++; }
+    });
+    if (cleared === 0) return false;
+    saveToLocal();
+    console.warn(`[sync] cleared ${cleared} stale capex link(s)`);
+    return true;
+  }
+  return false;
 }
 
 async function loadFromSupabase() {
@@ -4234,6 +4268,14 @@ async function openModal(taskId) {
     document.getElementById('modal-task-id').value = task.id;
     document.getElementById('modal-name').value = task.name;
     document.getElementById('modal-pillar').value = task.pillar || '';
+    if (task.capexProjectId != null && !_capexProjects.some(p => p.id === task.capexProjectId)) {
+      // Project not in the loaded list (load failed, or created after this tab loaded).
+      // Keep the link rather than silently resetting it to "No capex link" on save.
+      const opt = document.createElement('option');
+      opt.value = String(task.capexProjectId);
+      opt.textContent = `Capex project #${task.capexProjectId}` + (_capexLoaded ? ' (not found)' : ' (list not loaded)');
+      capexSelect.appendChild(opt);
+    }
     document.getElementById('modal-capex-project').value = task.capexProjectId != null ? String(task.capexProjectId) : '';
     document.getElementById('modal-space').value = task.space;
     document.getElementById('modal-status').value = task.status;
@@ -4651,13 +4693,19 @@ function capexBadge(text, styleMap) {
   return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${s.bg};color:${s.color};">${esc(text || '—')}</span>`;
 }
 
+// Raw fetch (not supabase-js) so a CDN failure doesn't leave the list empty.
+// Returns true only when the list was actually refreshed.
+let _capexLoaded = false;
 async function loadCapexProjects() {
-  if (!sb) return;
   try {
-    const { data, error } = await sb.from(CAPEX_TABLE).select('*').order('id');
-    if (error) { console.warn('capex load error:', error); return; }
+    const data = await _sbFetch(`${CAPEX_TABLE}?select=*&order=id`);
     _capexProjects = data || [];
-  } catch(e) { console.warn('loadCapexProjects failed:', e); }
+    _capexLoaded = true;
+    return true;
+  } catch(e) {
+    console.warn('loadCapexProjects failed:', e);
+    return false;
+  }
 }
 
 async function renderCapex(main) {
@@ -4883,8 +4931,15 @@ async function saveCapexProject() {
 async function deleteCapexProject(id) {
   if (!confirm('Delete this capex project? This cannot be undone.')) return;
   try {
-    const { error } = await sb.from(CAPEX_TABLE).delete().eq('id', id);
-    if (error) throw error;
+    await _sbFetch(`${CAPEX_TABLE}?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+    // DB sets capex_project_id to NULL on delete; mirror that in memory so the
+    // next bulk upsert doesn't resend the deleted id and fail the FK check.
+    const linked = tasks.filter(t => t.capexProjectId === id);
+    if (linked.length) {
+      linked.forEach(t => { t.capexProjectId = null; });
+      saveToLocal();
+      autoSaveToCloud(null);
+    }
     closeCapexModal();
     await loadCapexProjects();
     _renderCapexView(document.getElementById('main'));
