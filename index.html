@@ -2161,7 +2161,7 @@ async function autoSaveToCloud(successMessage) {
 // PERSISTENCE
 // ══════════════════════════════════════════════════════════════════════════════
 const LS_KEY = 'abh_3year_tasks';
-const CACHE_VERSION = '2026-09-16-capex-fk-v17';   // bump this to invalidate stale caches
+const CACHE_VERSION = '2026-05-22-team-fix-v16';   // bump this to invalidate stale caches
 const LS_VERSION_KEY = 'abh_3year_version';
 // Team cache version — bump to flush stale abh3y_team from localStorage.
 // Prevents an old (empty or wrong-cased) team list overriding Supabase data.
@@ -2235,6 +2235,7 @@ function normaliseTaskAssignees(t) {
 // Prevents repeated 400s on every save. Clears on reload, so once Rob runs the
 // ALTER TABLE SQL the flag flips back to false and recurrence starts persisting.
 let _recurrenceColumnMissing = false;
+let _capexColumnMissing = false;
 
 function taskToDbRow(t) {
   const row = {
@@ -2258,12 +2259,14 @@ function taskToDbRow(t) {
     pillar: t.pillar || null,
     parent_id: t.parentId || null,
     parent_name: t.parentName || null,
-    capex_project_id: t.capexProjectId != null ? parseInt(t.capexProjectId) : null,
   };
-  // Only include the recurrence column if Supabase has it. Defensive because the
-  // column was added late and some databases may not have been migrated yet.
+  // Only include these columns if Supabase has them. Defensive because both were
+  // added via migrations; omitting them prevents repeated 400s on un-migrated DBs.
   if (!_recurrenceColumnMissing) {
     row.recurrence = t.recurrence || null;
+  }
+  if (!_capexColumnMissing) {
+    row.capex_project_id = t.capexProjectId != null ? parseInt(t.capexProjectId) : null;
   }
   return row;
 }
@@ -2339,6 +2342,12 @@ async function saveToSupabase() {
     }
     return true;
   } catch(e) {
+    // Detect missing column (PGRST204 / "does not exist") and set the guard flag so
+    // subsequent saves omit the column rather than failing on every attempt.
+    if (e.code === 'PGRST204' || /does not exist/i.test(e.message || '')) {
+      if (/recurrence/.test(e.message || '')) _recurrenceColumnMissing = true;
+      if (/capex_project_id/.test(e.message || '')) _capexColumnMissing = true;
+    }
     console.error('saveToSupabase error:', e);
     _lastSyncError = e;
     return false;
@@ -4234,7 +4243,18 @@ async function openModal(taskId) {
     document.getElementById('modal-task-id').value = task.id;
     document.getElementById('modal-name').value = task.name;
     document.getElementById('modal-pillar').value = task.pillar || '';
-    document.getElementById('modal-capex-project').value = task.capexProjectId != null ? String(task.capexProjectId) : '';
+    const capexIdStr = task.capexProjectId != null ? String(task.capexProjectId) : '';
+    capexSelect.value = capexIdStr;
+    if (capexIdStr && capexSelect.value !== capexIdStr) {
+      // Option not yet in list (project added in another tab, or capex load failed).
+      // Inject a placeholder so the link is preserved until the user explicitly changes it.
+      const ph = document.createElement('option');
+      ph.value = capexIdStr;
+      ph.textContent = `Project #${capexIdStr} (not loaded — link preserved)`;
+      ph.dataset.stale = 'true';
+      capexSelect.appendChild(ph);
+      capexSelect.value = capexIdStr;
+    }
     document.getElementById('modal-space').value = task.space;
     document.getElementById('modal-status').value = task.status;
     document.getElementById('modal-priority').value = task.priority;
@@ -4392,6 +4412,7 @@ function spawnNextRecurrence(task) {
     ...task,
     id: 'new_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
     status: 'to do',
+    capexProjectId: null,
     dueDate: nextDueIso,
     startDate: null,
     dateCreated: new Date().toISOString().slice(0, 10),
@@ -4652,10 +4673,8 @@ function capexBadge(text, styleMap) {
 }
 
 async function loadCapexProjects() {
-  if (!sb) return;
   try {
-    const { data, error } = await sb.from(CAPEX_TABLE).select('*').order('id');
-    if (error) { console.warn('capex load error:', error); return; }
+    const data = await _sbFetch(`${CAPEX_TABLE}?select=*&order=id`);
     _capexProjects = data || [];
   } catch(e) { console.warn('loadCapexProjects failed:', e); }
 }
@@ -4885,6 +4904,11 @@ async function deleteCapexProject(id) {
   try {
     const { error } = await sb.from(CAPEX_TABLE).delete().eq('id', id);
     if (error) throw error;
+    // Null out the capex link on any in-memory task that referenced this project,
+    // then sync immediately so no task upsert can send a now-invalid FK.
+    let linked = 0;
+    tasks.forEach(t => { if (t.capexProjectId === id) { t.capexProjectId = null; linked++; } });
+    if (linked > 0) { saveToLocal(); autoSaveToCloud('Capex project deleted'); }
     closeCapexModal();
     await loadCapexProjects();
     _renderCapexView(document.getElementById('main'));
