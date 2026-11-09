@@ -2009,6 +2009,7 @@ let sortCol = 'dueDate';
 let sortAsc = true;
 let capexSortCol = 'expected_completion';
 let capexSortAsc = true;
+let _capexHideCompleted = true;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DATE HELPERS
@@ -3350,6 +3351,11 @@ function sortCapex(col) {
     capexSortCol = col;
     capexSortAsc = true;
   }
+  _renderCapexView(document.getElementById('main'));
+}
+
+function toggleCapexHideCompleted(val) {
+  _capexHideCompleted = val;
   _renderCapexView(document.getElementById('main'));
 }
 
@@ -4743,10 +4749,11 @@ function _renderCapexView(main) {
   </div>
 </div>`;
 
-  // Table
-  const tableRows = projects.length === 0
-    ? `<tr><td colspan="10" style="text-align:center;padding:32px;color:#999;">No capex projects yet. Click Add Project to get started.</td></tr>`
-    : projects.map(p => {
+  // Table — apply hide-completed filter
+  const displayProjects = _capexHideCompleted ? projects.filter(p => p.status !== 'Completed') : projects;
+  const tableRows = displayProjects.length === 0
+    ? `<tr><td colspan="10" style="text-align:center;padding:32px;color:#999;">${projects.length > 0 ? 'All projects are completed. Uncheck &ldquo;Hide Completed&rdquo; to show them.' : 'No capex projects yet. Click Add Project to get started.'}</td></tr>`
+    : displayProjects.map(p => {
         const qLinks = [p.onedrive_link, p.quote_2_link, p.quote_3_link]
           .map((u, i) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-weight:600;margin-right:6px;" title="Quote ${i+1}">Q${i+1} &#8599;</a>` : '')
           .join('');
@@ -4772,7 +4779,13 @@ function _renderCapexView(main) {
       <div style="font-size:22px;font-weight:bold;color:var(--navy);margin-bottom:4px;">Capital Investment Projects</div>
       <div style="font-size:13px;color:#666;">Track all capex proposals through from submission to board approval. Click any row to edit.</div>
     </div>
-    <button class="btn btn-navy" onclick="openCapexModal(null)" style="white-space:nowrap;">+ Add Project</button>
+    <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="cx-hide-completed" ${_capexHideCompleted ? 'checked' : ''} onchange="toggleCapexHideCompleted(this.checked)" style="cursor:pointer;accent-color:var(--navy);">
+        Hide Completed
+      </label>
+      <button class="btn btn-navy" onclick="openCapexModal(null)" style="white-space:nowrap;">+ Add Project</button>
+    </div>
   </div>
 
   ${tileHtml}
