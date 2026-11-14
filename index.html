@@ -4936,7 +4936,36 @@ async function deleteCapexProject(id) {
 // ══════════════════════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════════════════════
-initData();
+
+/* ════ BACKGROUND POLLING (time-aware, reduced IO budget) ════ */
+// 7am–7pm AEST: refresh every 30 min. Outside that window: every 2 hr.
+// Queensland does not observe DST — AEST is always UTC+10.
+function getPollingInterval() {
+  const aestHour = (new Date().getUTCHours() + 10) % 24;
+  return (aestHour >= 7 && aestHour < 19)
+    ? 30 * 60 * 1000     // 1,800,000 ms — 30 min during business hours
+    : 2 * 60 * 60 * 1000; // 7,200,000 ms — 2 hr overnight
+}
+
+async function backgroundRefresh() {
+  if (!sb) { setTimeout(backgroundRefresh, getPollingInterval()); return; }
+  try {
+    const data = await loadFromSupabase();
+    if (data && data.length > 0) {
+      tasks = data;
+      tasks.forEach(normaliseTaskAssignees);
+      backfillPillars();
+      populatePersonFilter();
+      renderView();
+      console.info('[poll] Background refresh complete —', new Date().toLocaleTimeString('en-AU', {timeZone:'Australia/Brisbane'}));
+    }
+  } catch(e) {
+    console.warn('[poll] Background refresh failed:', e);
+  }
+  setTimeout(backgroundRefresh, getPollingInterval());
+}
+
+initData().then(() => setTimeout(backgroundRefresh, getPollingInterval()));
 </script>
 </body>
 </html>
