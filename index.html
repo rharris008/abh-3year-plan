@@ -4899,15 +4899,22 @@ async function saveCapexProject() {
 
   try {
     if (_capexEditId != null) {
-      const { error } = await sb.from(CAPEX_TABLE).update(payload).eq('id', _capexEditId);
-      if (error) throw error;
+      await _sbFetch(`${CAPEX_TABLE}?id=eq.${_capexEditId}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify(payload)
+      });
     } else {
-      const { error } = await sb.from(CAPEX_TABLE).insert([payload]);
-      if (error) throw error;
+      await _sbFetch(CAPEX_TABLE, {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify(payload)
+      });
     }
     closeCapexModal();
     await loadCapexProjects();
     _renderCapexView(document.getElementById('main'));
+    toast('Capex project saved');
   } catch(e) {
     console.error('saveCapexProject failed:', e);
     alert('Save failed: ' + (e.message || JSON.stringify(e)));
@@ -4917,8 +4924,7 @@ async function saveCapexProject() {
 async function deleteCapexProject(id) {
   if (!confirm('Delete this capex project? This cannot be undone.')) return;
   try {
-    const { error } = await sb.from(CAPEX_TABLE).delete().eq('id', id);
-    if (error) throw error;
+    await _sbFetch(`${CAPEX_TABLE}?id=eq.${id}`, { method: 'DELETE' });
     // Null out the capex link on any in-memory task that referenced this project,
     // then sync immediately so no task upsert can send a now-invalid FK.
     let linked = 0;
