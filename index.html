@@ -4898,19 +4898,16 @@ async function saveCapexProject() {
   };
 
   try {
-    if (_capexEditId != null) {
-      await _sbFetch(`${CAPEX_TABLE}?id=eq.${_capexEditId}`, {
-        method: 'PATCH',
-        headers: { 'Prefer': 'return=minimal' },
-        body: JSON.stringify(payload)
-      });
-    } else {
-      await _sbFetch(CAPEX_TABLE, {
-        method: 'POST',
-        headers: { 'Prefer': 'return=minimal' },
-        body: JSON.stringify(payload)
-      });
-    }
+    // Use upsert (POST + merge-duplicates) for both insert and update —
+    // the same pattern as saveToSupabase() which is confirmed working.
+    const upsertPayload = _capexEditId != null
+      ? { ...payload, id: _capexEditId }
+      : payload;
+    await _sbFetch(CAPEX_TABLE, {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(upsertPayload)
+    });
     closeCapexModal();
     await loadCapexProjects();
     _renderCapexView(document.getElementById('main'));
